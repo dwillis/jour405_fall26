@@ -69,8 +69,8 @@ sleep_stats <- sleep_stats |>
   mutate(
     t_critical = qt(0.975, df = n - 1),
     margin_error = t_critical * se_hours,
-    ci_lower = mean_hours - se_hours,
-    ci_upper = mean_hours + se_hours
+    ci_lower = mean_hours - margin_error,
+    ci_upper = mean_hours + margin_error
   )
 
 sleep_stats |>

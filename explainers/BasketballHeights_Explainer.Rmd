@@ -1,0 +1,124 @@
+---
+title: "Basketball Heights Activity: Code Explainer"
+---
+
+This document walks through the key code patterns in the Basketball Heights activity, which uses a t-test to compare Maryland WBB player heights to a Division I sample.
+
+## Loading data and filtering in one step
+
+```
+wbb_rosters <- read_csv("...") |> filter(!is.na(total_inches)) |> filter(division == 'I')
+```
+
+You can chain multiple operations right after loading data. `filter(!is.na(total_inches))` removes rows where the height column is missing. The `!` means "not," so `!is.na()` means "is NOT missing." `filter(division == 'I')` keeps only Division I players. The double equals `==` is a comparison (is this value equal to 'I'?), unlike single `=` which assigns a value.
+
+## Random sampling with `sample()`
+
+```
+population_data <- wbb_rosters[sample(nrow(wbb_rosters), 100), ]
+```
+
+`nrow(wbb_rosters)` returns the total number of rows. `sample(nrow(wbb_rosters), 100)` picks 100 random row numbers. The bracket notation `[rows, ]` selects those specific rows from the data frame. The comma with nothing after it means "keep all columns." This creates a random sample of 100 players from the full dataset.
+
+## Filtering to a specific team
+
+```
+maryland <- wbb_rosters |> filter(ncaa_id == 392)
+```
+
+Each school has a unique `ncaa_id` number. Filtering to `392` gives us just Maryland's roster. You need to know the ID in advance (or look it up in the data).
+
+## Running a t-test with `t.test()`
+
+```
+result <- t.test(x = maryland$total_inches, mu = mean(population_data$total_inches),
+                 alternative = "two.sided")
+```
+
+`t.test()` compares a set of values to a known or calculated average. The key arguments:
+
+- `x = maryland$total_inches`: The actual data you are testing (Maryland players' heights).
+- `mu = mean(population_data$total_inches)`: The comparison value — the average height of the sample population.
+- `alternative = "two.sided"`: Test whether Maryland is different in *either* direction (taller or shorter). Other options are `"greater"` or `"less"` for one-sided tests.
+
+The `$` operator accesses a single column from a data frame: `maryland$total_inches` gives you just the height values as a list of numbers.
+
+## Extracting the p-value
+
+```
+p_value <- result$p.value
+```
+
+After running `t.test()`, the result is an object containing several pieces of information. `result$p.value` pulls out just the p-value. You can also access other parts like `result$estimate` (the sample mean) or `result$conf.int` (the confidence interval).
+
+## Using `if/else` for decisions
+
+```
+if (p_value < alpha) {
+  decision <- "reject the null hypothesis"
+} else {
+  decision <- "fail to reject the null hypothesis"
+}
+```
+
+This is a basic conditional: if the p-value is below the threshold (`alpha`, set to 0.05), take one action; otherwise, take another. The result is stored in `decision` for use later. Unlike `case_when()` which works inside `mutate()` on columns, `if/else` works on a single value.
+
+## Building a sentence with `paste()`
+
+```
+interpretation <- paste("Based on the p-value of", round(p_value, 4),
+                        ", at a significance level of", alpha,
+                        ", we", decision, "...")
+```
+
+`paste()` glues text and numbers together into one string. Each argument is separated by a space in the output. `round(p_value, 4)` rounds the number to 4 decimal places so it reads cleanly in a sentence.
+
+## Calculating a t-statistic manually with `pt()`
+
+```
+t_statistic <- (sample_mean - hypothesized_mean) / (sample_std_dev / sqrt(sample_size))
+p_value <- pt(t_statistic, df = degrees_of_freedom)
+```
+
+When you only have summary numbers (mean, standard deviation, sample size) instead of the raw data, you can calculate the t-statistic yourself. `pt()` then converts that t-statistic into a p-value. `df` stands for degrees of freedom, which is typically the sample size minus 1. `sqrt()` calculates the square root.
+
+## Common mistakes
+
+**Using `=` instead of `==` in `filter()`:**
+
+```
+# Wrong — this assigns the value, not compares it (and causes an error):
+wbb_rosters |> filter(division = 'I')
+
+# Correct — double equals for comparison:
+wbb_rosters |> filter(division == 'I')
+```
+
+Single `=` is assignment ("set this to"). Double `==` is comparison ("is this equal to?"). This is one of the most common R errors.
+
+**Forgetting `!` in `!is.na()`:**
+
+```
+# Wrong — keeps ONLY the rows with missing values:
+filter(is.na(total_inches))
+
+# Correct — removes the rows with missing values:
+filter(!is.na(total_inches))
+```
+
+`is.na()` returns TRUE when a value IS missing. The `!` flips it: `!is.na()` returns TRUE when a value is NOT missing.
+
+**Using the wrong `alternative` in `t.test()`:**
+
+```
+# "two.sided" — are they different in either direction?
+t.test(x, mu = 65, alternative = "two.sided")
+
+# "greater" — is x significantly HIGHER than 65?
+t.test(x, mu = 65, alternative = "greater")
+
+# "less" — is x significantly LOWER than 65?
+t.test(x, mu = 65, alternative = "less")
+```
+
+The choice depends on your question. If you are asking "are Maryland players taller OR shorter?" use `"two.sided"`. If you are asking specifically "are they shorter?" use `"less"`. Using the wrong one can give you a misleading p-value.

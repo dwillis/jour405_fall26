@@ -1,0 +1,136 @@
+---
+title: "Weighting Activity: Code Explainer"
+---
+
+This document walks through the key code patterns in the Survey Weighting activity.
+
+## Multiple libraries in the setup block
+
+```
+library(knitr)
+install.packages("kableExtra")
+library(kableExtra)
+library(tidyverse)
+```
+
+`kableExtra` extends `knitr`'s `kable()` function with fancier table formatting. As with any package, `install.packages()` only needs to run once — after installing, you can comment it out. Order matters: load `knitr` before `kableExtra` since `kableExtra` builds on it.
+
+## Counting and calculating percentages
+
+```
+nonvoters_data |>
+  count(voter_category) |>
+  mutate(percentage = n / sum(n) * 100)
+```
+
+`count(voter_category)` groups by voter category and counts rows, creating a column called `n`. Then `mutate()` calculates each category's percentage. `sum(n)` adds up all the counts to get the total, and dividing each `n` by that total gives the proportion. Multiplying by 100 converts to a percentage.
+
+## Filtering with multiple conditions
+
+```
+nonvoters_data |>
+  filter(!is.na(Q21), Q21 > 0)
+```
+
+The comma between conditions inside `filter()` means AND — both conditions must be true. `!is.na(Q21)` removes rows where Q21 is missing. `Q21 > 0` removes rows where Q21 is zero (which likely means "no response" in this survey). You can chain as many conditions as you need.
+
+## Weighted counts with `sum(weight)`
+
+```
+nonvoters_data |>
+  group_by(voter_category, Q21) |>
+  summarize(weighted_count = sum(weight), .groups = "drop_last")
+```
+
+Instead of counting rows (which treats every respondent equally), `sum(weight)` adds up the survey weights. A respondent with a weight of 1.5 counts as 1.5 people; one with a weight of 0.7 counts as 0.7. `.groups = "drop_last"` controls what happens to the grouping after `summarize()` — here it keeps the first grouping level (`voter_category`) so the next `mutate()` can calculate percentages within each category.
+
+## Reshaping with `pivot_wider()`
+
+```
+unweighted_summary <- unweighted_by_voter_category |>
+  pivot_wider(
+    id_cols = voter_category,
+    names_from = Q21,
+    values_from = percentage,
+    names_prefix = "pct_"
+  )
+```
+
+`pivot_wider()` reshapes long data into wide data. Before pivoting, you might have:
+
+| voter_category | Q21 | percentage |
+|---|---|---|
+| always | 1 | 92.3 |
+| always | 2 | 3.1 |
+| always | 3 | 4.6 |
+
+After pivoting, you get:
+
+| voter_category | pct_1 | pct_2 | pct_3 |
+|---|---|---|---|
+| always | 92.3 | 3.1 | 4.6 |
+
+- `id_cols`: Which column(s) identify each row in the output.
+- `names_from`: Which column's values become the new column names.
+- `values_from`: Which column's values fill the new columns.
+- `names_prefix`: Text added to the front of each new column name.
+
+## Renaming columns
+
+```
+|> rename("Yes (%)" = pct_1, "No (%)" = pct_2, "Unsure (%)" = pct_3)
+```
+
+`rename()` changes column names. The format is `"new name" = old_name`. You can rename as many columns as you want in one call.
+
+## Joining tables with `inner_join()`
+
+```
+comparison <- unweighted_summary |>
+  inner_join(weighted_summary, by = "voter_category", suffix = c("_unweighted", "_weighted"))
+```
+
+`inner_join()` combines two tables side by side, matching rows by a shared column (here, `voter_category`). Only rows that exist in both tables are kept. The `suffix` argument adds text to disambiguate columns that have the same name in both tables — so `Yes (%)` becomes `Yes (%)_unweighted` from the first table and `Yes (%)_weighted` from the second.
+
+## Common mistakes
+
+**Using `n()` when you should use `sum(weight)`:**
+
+```
+# Unweighted — counts people equally:
+summarize(count = n())
+
+# Weighted — accounts for survey weights:
+summarize(weighted_count = sum(weight))
+```
+
+In weighted analysis, `n()` gives you the raw count of respondents, which may not reflect the population. `sum(weight)` gives the weighted count.
+
+**Forgetting `.groups` in `summarize()` after multiple `group_by()` columns:**
+
+```
+# Warning: "`summarize()` has grouped output by 'voter_category'"
+group_by(voter_category, Q21) |> summarize(count = n())
+
+# Fix — tell R what to do with the grouping:
+group_by(voter_category, Q21) |> summarize(count = n(), .groups = "drop_last")
+```
+
+`.groups = "drop_last"` keeps grouping by the first variable but drops the second. `.groups = "drop"` removes all grouping. Without specifying, R prints a warning and keeps the first group.
+
+**Mixing up `pivot_wider()` arguments:**
+
+```
+# names_from — which column's VALUES become new COLUMN NAMES
+# values_from — which column's VALUES fill those new columns
+# id_cols — which column identifies each row
+
+# A common mistake is swapping names_from and values_from:
+# Wrong:
+pivot_wider(names_from = percentage, values_from = Q21)
+
+# Correct:
+pivot_wider(names_from = Q21, values_from = percentage)
+```
+
+Think of it as: "the new column names come FROM Q21, and the values to fill them come FROM percentage."

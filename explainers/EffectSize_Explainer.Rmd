@@ -1,0 +1,146 @@
+---
+title: "Effect Size Activity: Code Explainer"
+---
+
+This document walks through the key code patterns in the Effect Size activity. Many basics (loading libraries, `group_by()`, `summarize()`, `t.test()`) are covered in other explainers, so this focuses on what is new.
+
+## Creating data with `rep()` and `tibble()`
+
+```
+shop_a_data <- tibble(
+  method = c(rep("Old", 5), rep("New", 5)),
+  temperature = c(shop_a_old, shop_a_new)
+)
+```
+
+`tibble()` is the tidyverse version of `data.frame()` — it creates a table. `rep("Old", 5)` repeats the text "Old" five times. `c(rep("Old", 5), rep("New", 5))` creates a column with 5 "Old" labels followed by 5 "New" labels. The `temperature` column is built by gluing two vectors of numbers together with `c()`.
+
+## Running a t-test with a formula
+
+```
+shop_a_ttest <- t.test(temperature ~ method, data = shop_a_data)
+```
+
+The `~` (tilde) formula syntax is an alternative to passing two separate vectors. `temperature ~ method` reads as "model temperature as split by method." R automatically splits the temperature column into two groups based on the values in the method column and compares them. This is a *two-sample* t-test (comparing two groups), as opposed to the one-sample t-test in the Basketball Heights activity.
+
+## Writing a custom function
+
+```
+calculate_cohens_d <- function(group1, group2) {
+  mean_diff <- mean(group1) - mean(group2)
+  pooled_sd <- sqrt((sd(group1)^2 + sd(group2)^2) / 2)
+  d <- mean_diff / pooled_sd
+  return(d)
+}
+```
+
+`function(group1, group2)` creates a reusable piece of code. `group1` and `group2` are placeholders — when you call the function, you pass in actual data. Inside the function, intermediate results are calculated step by step. `return(d)` specifies what the function gives back. Once defined, you can call it like any built-in function: `calculate_cohens_d(data_a, data_b)`.
+
+`^2` means "squared." `sqrt()` is square root. So `sqrt((sd(group1)^2 + sd(group2)^2) / 2)` computes the pooled standard deviation.
+
+## Subsetting with bracket notation
+
+```
+shop_a_data$temperature[shop_a_data$method == "New"]
+```
+
+This pulls out only the temperature values where the method is "New." The bracket `[]` filters: `shop_a_data$method == "New"` creates a TRUE/FALSE list, and the bracket keeps only the rows where it is TRUE. This is necessary when calling a function that expects two separate lists of numbers rather than a formula.
+
+## Categorizing with `case_when()` inside a function
+
+```
+categorize_effect <- function(d) {
+  d <- abs(d)
+  case_when(
+    d < 0.2 ~ "Negligible",
+    d < 0.5 ~ "Small",
+    d < 0.8 ~ "Medium",
+    d < 1.0 ~ "Large",
+    TRUE ~ "Very Large"
+  )
+}
+```
+
+This function takes a Cohen's d value and returns a plain-English label. `abs(d)` ensures negative values are treated the same as positive ones (direction does not matter for effect size magnitude). The `case_when()` conditions are checked in order — the first TRUE match wins.
+
+## Building a comparison table with `tibble()`
+
+```
+comparison <- tibble(
+  Shop = c("Shop A", "Shop B"),
+  Sample_Size = c(10, 400),
+  P_Value = c(
+    format(shop_a_ttest$p.value, scientific = FALSE, digits = 4),
+    format(shop_b_ttest$p.value, scientific = FALSE, digits = 4)
+  ),
+  ...
+)
+```
+
+You can build a table by hand with `tibble()`, providing each column as a vector. `format(..., scientific = FALSE)` prevents R from displaying tiny p-values in scientific notation (like 2.3e-05). `digits = 4` controls how many significant digits to show. `knitr::kable()` then prints it as a formatted table.
+
+## Formatting with `scales::dollar_format()`
+
+```
+scale_x_continuous(labels = scales::dollar_format())
+```
+
+`scales::dollar_format()` formats axis labels as currency ($50,000 instead of 50000). The `scales::` prefix means "use the `dollar_format` function from the `scales` package." This avoids loading the entire package when you only need one function.
+
+## Overlapping density plot with mean lines
+
+```
+ggplot(salary_data, aes(x = salary, fill = gender)) +
+  geom_density(alpha = 0.5) +
+  geom_vline(data = salary_stats, aes(xintercept = mean_salary, color = gender),
+             linetype = "dashed", size = 1)
+```
+
+`geom_density()` draws overlapping distribution curves, one per group. `geom_vline()` adds vertical lines at each group's mean. Notice the `data = salary_stats` argument — this tells `geom_vline()` to use a different data frame than the main chart. This is a powerful technique: different layers of the same chart can draw from different data sources.
+
+## Common mistakes
+
+**Confusing the two-sample t-test syntax:**
+
+```
+# Formula syntax — R splits the data for you:
+t.test(temperature ~ method, data = shop_a_data)
+
+# Vector syntax — you split the data yourself:
+t.test(shop_a_old, shop_a_new)
+
+# Wrong — passing a single column and a formula together:
+t.test(shop_a_data$temperature ~ shop_a_data$method)
+# This works but is messy. Use data = instead.
+```
+
+The formula syntax (`y ~ group`) is cleaner when your data is in a single data frame with a grouping column. The vector syntax is for when you have two separate lists of numbers.
+
+**Forgetting `return()` in a custom function:**
+
+```
+# Works — but only because R returns the last evaluated expression:
+calculate_cohens_d <- function(group1, group2) {
+  d <- (mean(group1) - mean(group2)) / sqrt((sd(group1)^2 + sd(group2)^2) / 2)
+}
+
+# Better — explicit about what the function gives back:
+calculate_cohens_d <- function(group1, group2) {
+  d <- (mean(group1) - mean(group2)) / sqrt((sd(group1)^2 + sd(group2)^2) / 2)
+  return(d)
+}
+```
+
+R automatically returns the last expression in a function, but `return()` makes the intent clear. Use it when the function has multiple steps.
+
+**Using `[` instead of `[[` to subset a list:**
+
+```
+# [1] gives you a one-element LIST:
+strsplit("hello", "")[1]   # returns list("h", "e", "l", "l", "o")
+
+# [[1]] gives you the VECTOR inside the list:
+strsplit("hello", "")[[1]]  # returns c("h", "e", "l", "l", "o")
+```
+
+`strsplit()` returns a list. Use `[[1]]` to get the character vector out of it.

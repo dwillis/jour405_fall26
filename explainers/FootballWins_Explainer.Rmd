@@ -1,0 +1,82 @@
+---
+title: "Football Wins Activity: Code Explainer"
+---
+
+This document walks through the key code patterns in the Football Wins activity, which introduces multiple regression and correlation matrices.
+
+## Setting scientific notation off
+
+```
+options(scipen = 999)
+```
+
+By default, R displays very large or very small numbers in scientific notation (like 4.058e-06). `options(scipen = 999)` tells R to use regular decimal notation instead. This makes output easier to read, especially for p-values and dollar amounts. Put it near the top of your notebook.
+
+## Multiple regression
+
+```
+model <- lm(Wins ~ `Yards Gained` + Takeaways + `Points Scored`, data = teams)
+```
+
+This is like simple regression (`y ~ x`) but with multiple predictors joined by `+`. The formula reads: "predict Wins using Yards Gained, Takeaways, and Points Scored together." `summary(model)` shows a coefficient for each predictor, telling you how much each one contributes to the prediction while accounting for the others.
+
+## Reading `summary(model)` output
+
+The key pieces to look at in the regression summary:
+
+- **Coefficients**: Each predictor gets a row. The `Estimate` column is the slope (how much Wins changes per unit change in that predictor). The `Pr(>|t|)` column is the p-value.
+- **Multiple R-squared**: The percentage of variation in Wins explained by all the predictors combined. A value of 0.62 means 62%.
+- **Adjusted R-squared**: A slightly lower version that penalizes you for adding predictors that do not help. Use this one when comparing models.
+- **F-statistic and p-value**: Tests whether the model as a whole is meaningful. A very small p-value means the predictors collectively matter.
+
+## Selecting columns for a correlation matrix
+
+```
+selected_vars <- teams |> select(`Yards Gained`, Takeaways, `Points Scored`, Wins)
+cor(selected_vars)
+```
+
+`cor()` computes the correlation between every pair of columns in a data frame, returning a matrix of numbers from -1 to 1. You first use `select()` to keep only the numeric columns you care about. The result is a square table where each cell shows how strongly two variables are related.
+
+## Visualizing a correlation matrix with `corrplot`
+
+```
+library(corrplot)
+corr_matrix <- cor(selected_vars)
+corrplot(corr_matrix, method = "circle")
+```
+
+`corrplot()` draws the correlation matrix as a grid of circles. Bigger circles mean stronger correlations. Color indicates direction: typically blue for positive and red for negative. `method = "circle"` is one of several display options — you could also use `"number"`, `"color"`, or `"shade"`.
+
+## Common mistakes
+
+**Using `*` instead of `+` to combine predictors in regression:**
+
+```
+# Wrong — * creates an interaction term (a more complex model):
+lm(Wins ~ `Yards Gained` * Takeaways, data = teams)
+
+# Correct — + means "use both predictors independently":
+lm(Wins ~ `Yards Gained` + Takeaways, data = teams)
+```
+
+`+` adds separate predictors. `*` adds predictors AND their interaction (how they affect each other). Use `+` unless you have a specific reason to test interactions.
+
+**Confusing R-squared with Adjusted R-squared:**
+
+```
+# Multiple R-squared: 0.6232 — how well the model fits this specific data
+# Adjusted R-squared: 0.5828 — how well the model fits, penalized for extra predictors
+```
+
+Always report Adjusted R-squared when comparing models with different numbers of predictors. A model can get a higher R-squared just by adding more variables, even useless ones. Adjusted R-squared penalizes for that.
+
+**Passing a data frame with text columns to `cor()`:**
+
+```
+# Error or unexpected output — cor() cannot handle team names:
+cor(teams)
+
+# Correct — select only the numeric columns you want:
+teams |> select(`Yards Gained`, Takeaways, `Points Scored`, Wins) |> cor()
+```

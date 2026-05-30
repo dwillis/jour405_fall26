@@ -1,0 +1,54 @@
+---
+title: "HW15: WMATA Bus vs. Rail Correlation"
+---
+
+Your editor has a theory: when Metro rail ridership drops, bus ridership drops too — meaning bad days for the system are bad across the board. But is that actually true? Maybe riders substitute one mode for the other when there are problems. You're going to find out using the WMATA daily ridership data you've worked with before.
+
+Your task is to calculate the correlation between daily bus and rail ridership and create a scatterplot to visualize the relationship. You'll also dig into what the outliers tell us.
+
+### Task 1: Load the tidyverse
+
+```{r}
+```
+
+### Task 2: Load the WMATA daily ridership data
+
+Load the data from https://raw.githubusercontent.com/dwillis/jour405/refs/heads/main/data/wmata_daily.csv
+
+```{r}
+```
+
+### Task 3: Calculate the correlation coefficient
+
+Use `summarize()` and the `cor()` function to calculate the correlation coefficient between bus and rail ridership, using the pearson method. Save the result to a dataframe called `wmata_cor`.
+
+```{r}
+```
+
+### Task 4: Create a scatterplot
+
+Use `ggplot()` and `geom_point()` to create a scatterplot with rail ridership on the x-axis and bus ridership on the y-axis. Add a linear trend line using `geom_smooth(method="lm")`. Be sure to label your axes and add a title.
+
+```{r}
+```
+
+### Task 5: Describe the correlation
+
+Based on the correlation coefficient and the scatterplot, describe the relationship between bus and rail ridership. Is it positive or negative? Strong or weak? What does this tell your editor about whether the two systems rise and fall together?
+
+ANSWER HERE
+
+### Task 6: Identify outliers
+
+Looking at your scatterplot, you should see some points that don't fit the overall pattern — days where bus and rail ridership diverge. Using `mutate()`, create a new column called `bus_rail_ratio` that divides bus ridership by rail ridership. Then use `arrange()` to find the days with the highest and lowest ratios. What do those days tell you? Are there events or patterns that might explain why the two modes diverged on those days?
+
+```{r}
+```
+
+### Task 7: Write a pitch
+
+Based on everything you've found, write 2-3 sentences pitching a story to your editor. What's the main finding, and what would you want to report out next?
+
+ANSWER HERE
+
+When you are done, save your work, switch to GitHub Desktop, then add, commit and push your changes to GitHub and submit the URL of the notebook in ELMS.

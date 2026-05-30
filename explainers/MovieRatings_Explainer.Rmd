@@ -1,0 +1,89 @@
+---
+title: "Movie Ratings Activity: Code Explainer"
+---
+
+This document walks through the key code patterns in the Movie Ratings activity, which uses a chi-square test to compare observed and expected frequencies.
+
+## Installing a package from inside a notebook
+
+```
+install.packages("vcd")
+library(vcd)
+```
+
+`install.packages("vcd")` downloads the `vcd` (Visualizing Categorical Data) package. This line will run every time the notebook is knitted, which can be slow. After you have installed it once, you can comment it out by adding `#` at the beginning of the line: `# install.packages("vcd")`. Keep the `library(vcd)` line — that still needs to run every time.
+
+## Creating a data frame by hand
+
+```
+movie_ratings <- data.frame(
+  Rating = c("5 stars", "4 stars", "3 stars", "2 stars", "1 star"),
+  Percentage = c(0.4, 0.3, 0.2, 0.05, 0.05),
+  `Expected Frequency` = c(160, 120, 80, 20, 20),
+  `Observed Frequency` = c(145, 128, 73, 32, 22)
+)
+```
+
+`data.frame()` builds a table from scratch. Each argument is a column, and each column is a vector of values created with `c()`. The rows line up by position — the first element of each vector goes into the first row, and so on. Note: when column names have spaces (like `Expected Frequency`), `data.frame()` replaces spaces with periods in the actual column name, so you access it as `movie_ratings$Expected.Frequency`.
+
+## Running a chi-square test
+
+```
+chisq_result <- chisq.test(movie_ratings$Observed.Frequency, p = movie_ratings$Percentage)
+```
+
+`chisq.test()` compares observed counts to expected proportions. The first argument is the vector of observed counts. `p =` is the vector of expected proportions (they must add up to 1.0). The output includes the chi-square statistic, degrees of freedom, and p-value.
+
+## Finding the critical value with `qchisq()`
+
+```
+alpha <- 0.05
+df <- length(movie_ratings$Rating) - 1
+critical_value <- qchisq(alpha, df, lower.tail = FALSE)
+```
+
+`qchisq()` gives you the cutoff value from the chi-square distribution. `alpha` is your significance level (0.05 is standard). `df` is degrees of freedom, calculated as the number of categories minus 1. `lower.tail = FALSE` gives the right-tail critical value — you compare the chi-square statistic against this number. If the statistic is larger than the critical value, you reject the null hypothesis.
+
+`length()` counts the number of elements in a vector. `length(movie_ratings$Rating)` returns 5 (the five rating categories), so degrees of freedom is 4.
+
+## Common mistakes
+
+**Column names with spaces becoming periods in `data.frame()`:**
+
+```
+# You create a column called "Expected Frequency":
+data.frame(`Expected Frequency` = c(160, 120, 80, 20, 20))
+
+# But data.frame() silently converts it to "Expected.Frequency":
+movie_ratings$Expected.Frequency   # works
+movie_ratings$`Expected Frequency` # does NOT work
+
+# Fix: use tibble() instead, which preserves spaces:
+tibble(`Expected Frequency` = c(160, 120, 80, 20, 20))
+```
+
+`data.frame()` replaces spaces with periods in column names. `tibble()` does not. This is a common source of confusion.
+
+**Passing probabilities that do not add up to 1:**
+
+```
+# Wrong — these add up to 1.05, not 1.0:
+chisq.test(observed, p = c(0.4, 0.3, 0.2, 0.1, 0.05))
+
+# Correct — proportions must sum to exactly 1.0:
+chisq.test(observed, p = c(0.4, 0.3, 0.2, 0.05, 0.05))
+```
+
+`chisq.test()` will give an error if the probabilities do not sum to 1. Double-check your proportions.
+
+**Confusing `qchisq()` and `pchisq()`:**
+
+```
+# qchisq() gives you the CUTOFF value from a probability:
+qchisq(0.05, df = 4, lower.tail = FALSE)  # returns 9.49
+
+# pchisq() gives you the PROBABILITY from a chi-square value:
+pchisq(9.95, df = 4, lower.tail = FALSE)  # returns 0.041
+```
+
+`q` functions go from probability to value. `p` functions go from value to probability. This applies to `qnorm/pnorm`, `qt/pt`, and `qchisq/pchisq`.

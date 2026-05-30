@@ -1,0 +1,106 @@
+---
+title: "Car Theft Z-Scores Activity: Code Explainer"
+---
+
+This document walks through the key code patterns in the Car Theft Z-Scores activity. Many of the foundational patterns (loading data, `mutate()`, `filter()`, `ggplot()`) are explained in other explainers, so this one focuses on what is new or different.
+
+## Parsing dates with `parse_date_time()`
+
+```
+car_thefts <- car_thefts %>%
+  mutate(date = parse_date_time(month, "my"))
+```
+
+`parse_date_time()` converts text into a proper date that R understands. The `"my"` tells R the format is month-year (e.g., "Jan 2017"). Other common format codes: `"ymd"` for 2017-01-15, `"mdy"` for 01/15/2017. Once a column is a real date, R can sort it chronologically and use it on chart axes correctly.
+
+## Per capita rate calculation
+
+```
+car_thefts <- car_thefts %>%
+  mutate(thefts_per_100k = (total / population) * 100000)
+```
+
+Raw counts can be misleading when populations change. Dividing by population gives a rate, and multiplying by 100,000 makes the number easier to read (instead of a tiny decimal like 0.00034, you get 34 per 100,000). The multiplier (100,000, 10,000, 1,000) is a choice — pick whatever makes the numbers readable for your audience.
+
+## Plotting with a color based on a condition
+
+```
+ggplot(car_thefts, aes(x = month, y = total, color = abs(z_score) > 2)) +
+  geom_point(size = 3) +
+  scale_color_manual(values = c("black", "red"),
+                     name = "Unusual Value",
+                     labels = c("Normal", "Unusual"))
+```
+
+Instead of coloring by a column in the data, you can color by a TRUE/FALSE condition calculated on the fly. `abs(z_score) > 2` is evaluated for every row — it is TRUE for unusual months and FALSE for normal ones. `scale_color_manual()` then assigns colors to TRUE and FALSE. The `labels` argument controls what appears in the legend.
+
+## Seasonal z-scores with grouped `mutate()`
+
+```
+car_thefts <- car_thefts %>%
+  group_by(month_of_year) %>%
+  mutate(
+    seasonal_mean = mean(total),
+    seasonal_sd = sd(total),
+    seasonal_z_score = (total - seasonal_mean) / seasonal_sd
+  ) %>%
+  ungroup()
+```
+
+This calculates z-scores relative to the same month across years. `group_by(month_of_year)` means the mean and standard deviation are computed separately for all Januaries, all Februaries, etc. A January with a high seasonal z-score means it had unusually many thefts *compared to other Januaries*, not compared to the whole year. Always `ungroup()` when finished.
+
+## Using `pnorm()` to find probability
+
+```
+prob_above <- 1 - pnorm(z)
+```
+
+`pnorm(z)` gives the probability of getting a value *at or below* the given z-score, assuming a normal distribution. Subtracting from 1 gives the probability of getting a value *at or above* that z-score. For example, if `pnorm(2.5)` returns 0.9938, then `1 - 0.9938 = 0.0062`, meaning there is only about a 0.6% chance of a month being that extreme or more.
+
+## Using `sprintf()` and `cat()` for formatted output
+
+```
+cat(sprintf("Total thefts: %d\n", highest_month$total))
+cat(sprintf("Z-score: %.2f\n", z))
+```
+
+`sprintf()` creates a formatted string. `%d` is a placeholder for a whole number. `%.2f` is a placeholder for a decimal number rounded to 2 places. `\n` inserts a line break. `cat()` prints the result to the screen. This is useful when you want to build readable sentences from calculated values outside of a data frame.
+
+## Common mistakes
+
+**Using `pnorm()` when you want "above" instead of "below":**
+
+```
+# pnorm() gives the probability of a value THIS LOW or lower:
+pnorm(2.5)  # returns 0.9938
+
+# For "this high or higher," subtract from 1:
+1 - pnorm(2.5)  # returns 0.0062
+
+# Or use lower.tail = FALSE:
+pnorm(2.5, lower.tail = FALSE)  # also returns 0.0062
+```
+
+`pnorm()` always gives the *left tail* by default. If you want the *right tail* (probability of being this high or higher), you need `1 - pnorm()` or `lower.tail = FALSE`.
+
+**Using `%>%` and `|>` interchangeably without knowing the difference:**
+
+```
+# Both of these do the same thing:
+car_thefts %>% mutate(z_score = ...)
+car_thefts |> mutate(z_score = ...)
+```
+
+`%>%` is from the `magrittr` package (loaded with tidyverse). `|>` is built into R (version 4.1+). They work the same way in nearly all cases. You will see both in course materials — do not worry about which one to use. Just be consistent within a single notebook.
+
+**Forgetting to pass `mean` and `sd` to `pnorm()`:**
+
+```
+# Wrong — uses the standard normal (mean = 0, sd = 1) by default:
+pnorm(500)
+
+# Correct — provide your actual mean and sd:
+pnorm(500, mean = 400, sd = 80)
+```
+
+Without `mean` and `sd`, `pnorm()` assumes a standard normal distribution. You almost always need to specify the mean and standard deviation from your data.

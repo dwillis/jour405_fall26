@@ -1,0 +1,102 @@
+---
+title: "Car Thefts Activity: Code Explainer"
+---
+
+This document walks through the key code patterns in the Car Thefts activity, which introduces standard deviation, means, and histograms.
+
+## Loading the tidyverse
+
+```
+library(tidyverse)
+```
+
+This loads the core collection of R packages you will use in almost every activity. It includes `dplyr` (for data manipulation like `mutate()`, `filter()`, `summarize()`), `ggplot2` (for charts), `readr` (for `read_csv()`), and several others. You only need to load it once per notebook, typically in the first code block.
+
+## Loading a CSV from a URL
+
+```
+car_thefts <- read_csv("https://raw.githubusercontent.com/...")
+```
+
+`read_csv()` reads a comma-separated values file and turns it into a data frame (a table with rows and columns). You can give it a URL or a local file path. The `<-` arrow saves the result into a variable called `car_thefts` so you can refer to it later.
+
+## Calculating mean and standard deviation with `summarize()`
+
+```
+car_thefts |> summarize(mean = mean(count), sd = sd(count))
+```
+
+`summarize()` collapses an entire column down to a single summary number. `mean(count)` calculates the average of the `count` column. `sd(count)` calculates the standard deviation. The result is a tiny one-row table with columns named `mean` and `sd`. The pipe `|>` passes `car_thefts` into `summarize()` as its data.
+
+## Creating a histogram
+
+```
+car_thefts |>
+  ggplot() +
+  geom_histogram(aes(x = count), binwidth = 2)
+```
+
+`ggplot()` starts a chart. `geom_histogram()` creates a histogram — a bar chart that shows how many values fall into each range (bin). `aes(x = count)` tells it which column to use. `binwidth = 2` means each bar covers a range of 2 units. A narrower binwidth shows more detail; a wider one smooths things out.
+
+## Adding reference lines with `geom_vline()`
+
+```
+geom_vline(aes(xintercept = mean(count)), color = "red", linetype = "dashed", size = 1) +
+geom_vline(aes(xintercept = mean(count) - sd(count)), color = "blue", linetype = "dashed", size = 1) +
+geom_vline(aes(xintercept = mean(count) + sd(count)), color = "blue", linetype = "dashed", size = 1)
+```
+
+`geom_vline()` draws a vertical line on the chart. `xintercept` sets where the line goes on the x-axis. Here, three lines are drawn: one at the mean (red) and two at one standard deviation above and below the mean (blue). This visually shows the center and spread of the data.
+
+`linetype = "dashed"` makes the line dashed instead of solid. `size = 1` controls the thickness. You can layer as many `geom_` elements as you want by connecting them with `+`.
+
+## Common mistakes
+
+**Using `read.csv()` instead of `read_csv()`:**
+
+```
+# Works, but gives you a base R data frame:
+car_thefts <- read.csv("https://...")
+
+# Better — gives you a tibble with cleaner behavior:
+car_thefts <- read_csv("https://...")
+```
+
+`read_csv()` (with an underscore) is from the tidyverse and is faster, handles column types better, and produces cleaner output. `read.csv()` (with a period) is base R and still works, but you may see unexpected behavior with column names or data types.
+
+**Forgetting to load the tidyverse before using its functions:**
+
+```
+# Error: could not find function "read_csv"
+car_thefts <- read_csv("https://...")
+
+# Fix: load the library first
+library(tidyverse)
+car_thefts <- read_csv("https://...")
+```
+
+If you see "could not find function," it almost always means you forgot to run the `library()` block.
+
+**Confusing `summarize()` with `mutate()`:**
+
+```
+# This gives you a one-row table with just the mean:
+car_thefts |> summarize(mean = mean(count))
+
+# This adds a new column to every row, all containing the same mean:
+car_thefts |> mutate(mean = mean(count))
+```
+
+Use `summarize()` when you want to collapse data down to a summary. Use `mutate()` when you want to add a new column while keeping all the original rows.
+
+**Putting `aes()` outside `geom_histogram()`:**
+
+```
+# Wrong — aes() must be inside a geom or inside ggplot():
+car_thefts |> ggplot() + geom_histogram(x = count)
+
+# Correct:
+car_thefts |> ggplot() + geom_histogram(aes(x = count))
+```
+
+The `aes()` wrapper tells ggplot that `count` is a column name, not a fixed value.

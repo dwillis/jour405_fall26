@@ -1,0 +1,108 @@
+---
+title: "Polling Simulation Activity: Code Explainer"
+---
+
+This document walks through the key code patterns in the Polling Simulation activity, which simulates polls of different sizes to demonstrate sampling variability.
+
+## Creating a TRUE/FALSE column with `%in%`
+
+```
+ces <- ces |>
+  mutate(unaffiliated = trad %in% c("Atheist", "Agnostic", "Nothing in Particular"))
+```
+
+`%in%` checks whether each value in the `trad` column matches *any* of the values in the list on the right. If a respondent's `trad` value is "Atheist", "Agnostic", or "Nothing in Particular", the new column gets TRUE; otherwise FALSE. This is cleaner than writing `trad == "Atheist" | trad == "Agnostic" | trad == "Nothing in Particular"`.
+
+## Calculating a proportion from TRUE/FALSE
+
+```
+proportion <- mean(ces$unaffiliated)
+```
+
+When you take the `mean()` of a TRUE/FALSE column, R treats TRUE as 1 and FALSE as 0. So the mean is the proportion of TRUE values. If 35% of respondents are unaffiliated, `mean()` returns 0.35.
+
+## Sampling rows with `sample_n()`
+
+```
+sample_50 <- ces |> sample_n(50)
+```
+
+`sample_n(50)` randomly picks 50 rows from the data frame. Each run gives different rows unless you set a seed first with `set.seed()`. This simulates drawing a poll sample from the population.
+
+## Writing a simulation function
+
+```
+simulate_polls <- function(data, sample_size, n_simulations = 1000) {
+  proportions <- replicate(n_simulations, {
+    s <- data |> sample_n(sample_size)
+    mean(s$unaffiliated)
+  })
+  tibble(proportion = proportions, sample_size = sample_size)
+}
+```
+
+This function draws many random samples and records the proportion from each one. Breaking it down:
+
+- `function(data, sample_size, n_simulations = 1000)` defines three inputs. `n_simulations = 1000` is a default — if you do not specify it, it uses 1000.
+- `replicate(n_simulations, { ... })` runs the code inside the braces `n_simulations` times and collects all the results into a vector. It is like a for loop that automatically gathers results.
+- Inside the braces: sample rows, calculate the proportion. Each repetition returns one number.
+- `tibble(...)` packages the results into a data frame at the end.
+
+## Combining data frames with `bind_rows()`
+
+```
+simulations_all <- bind_rows(simulations_50, simulations_500) |>
+  mutate(sample_size = paste("n =", sample_size))
+```
+
+`bind_rows()` stacks two data frames on top of each other — all rows from the first, then all rows from the second. The columns must have the same names. `paste("n =", sample_size)` converts the number 50 into the text "n = 50" for nicer chart labels.
+
+## Side-by-side histograms with `facet_wrap()`
+
+```
+ggplot(simulations_all, aes(x = proportion)) +
+  geom_histogram(bins = 30, fill = "steelblue", color = "white") +
+  geom_vline(xintercept = proportion, color = "red", linetype = "dashed", linewidth = 1) +
+  facet_wrap(~sample_size)
+```
+
+`facet_wrap(~sample_size)` splits the chart into panels, one per unique value of `sample_size`. Both panels share the same x-axis scale, making it easy to compare the spread of the two distributions. `bins = 30` controls how many bars the histogram uses. `linewidth` is the newer name for what used to be called `size` in `geom_vline()`.
+
+## Common mistakes
+
+**Forgetting `set.seed()` before sampling:**
+
+```
+# Different every time you run it:
+sample_50 <- ces |> sample_n(50)
+
+# Same result every time (reproducible):
+set.seed(42)
+sample_50 <- ces |> sample_n(50)
+```
+
+Without `set.seed()`, you get different random rows each run. This is fine for exploration, but if your answers need to match someone else's (like a grader's), set the seed.
+
+**Using `==` instead of `%in%` for multiple values:**
+
+```
+# Wrong — only checks the first value:
+trad == c("Atheist", "Agnostic", "Nothing in Particular")
+
+# Correct — checks if trad matches ANY of the values:
+trad %in% c("Atheist", "Agnostic", "Nothing in Particular")
+```
+
+`==` with a vector does element-wise comparison (recycling), which gives wrong results. `%in%` checks membership — "is this value anywhere in the list?"
+
+**Confusing `bind_rows()` with `inner_join()`:**
+
+```
+# bind_rows() stacks data frames VERTICALLY (adds more rows):
+bind_rows(df1, df2)
+
+# inner_join() combines data frames HORIZONTALLY (adds more columns):
+inner_join(df1, df2, by = "shared_column")
+```
+
+Use `bind_rows()` when your data frames have the same columns and you want to combine them. Use `inner_join()` when they share a key column and you want to merge matching rows side by side.

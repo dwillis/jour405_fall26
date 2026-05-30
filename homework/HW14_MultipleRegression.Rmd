@@ -28,7 +28,6 @@ Before building our model, let's explore the data to understand the variables an
 
 ANSWER HERE
 
-
 ```{r}
 # Summary statistics
 summary(md_turnout)
@@ -59,33 +58,32 @@ md_turnout |>
 
 ## Task 2: Initial Model Evaluation (5 points)
 
-Next, we construct an initial linear model to analyze how different factors influence voter turnout across Maryland counties. This model helps us quantify the relationships and assess which factors are significant predictors of turnout. 
+Next, we construct an initial linear model to analyze how different factors influence voter turnout across Maryland counties. This model helps us quantify the relationships and assess which factors are significant predictors of turnout.
 
 ### Residuals
 
 The residuals of a model are the differences between observed values and the values predicted by the model. For this model:
 
-* **Min and Max** values indicate the range of residuals. 
-* **Median** value tells us if the model is generally centered around the actual data points.
+-   **Min and Max** values indicate the range of residuals.
+-   **Median** value tells us if the model is generally centered around the actual data points.
 
 ### Coefficients
 
 The coefficients tell us the estimated effect of each independent variable on the dependent variable:
 
-* **Population**: Is the coefficient positive or negative? Is it statistically significant?
-* **Income**: Does higher income correlate with higher turnout?
-* **Education (pct_bachelors_higher)**: How does education level impact voter participation?
-* **Unemployment**: Is there a relationship between unemployment and voter turnout?
-* **Median Age**: Do counties with older populations have different turnout rates?
-* **Race (pct_white)**: Is there a relationship between racial composition and turnout?
+-   **Population**: Is the coefficient positive or negative? Is it statistically significant?
+-   **Income**: Does higher income correlate with higher turnout?
+-   **Education (pct_bachelors_higher)**: How does education level impact voter participation?
+-   **Unemployment**: Is there a relationship between unemployment and voter turnout?
+-   **Median Age**: Do counties with older populations have different turnout rates?
+-   **Race (pct_white)**: Is there a relationship between racial composition and turnout?
 
 ### Model Fit
 
-* **Residual Standard Error**: How much does the model typically deviate from actual turnout?
-* **Multiple R-squared**: What percentage of the variability in turnout is explained by the model?
-* **Adjusted R-squared**: How well does the model fit after accounting for the number of variables?
-* **F-statistic**: Is the model as a whole statistically significant?
-
+-   **Residual Standard Error**: How much does the model typically deviate from actual turnout?
+-   **Multiple R-squared**: What percentage of the variability in turnout is explained by the model?
+-   **Adjusted R-squared**: How well does the model fit after accounting for the number of variables?
+-   **F-statistic**: Is the model as a whole statistically significant?
 
 Examine the output of the model, checking the coefficients, residuals, and overall model fit. How well does this multiple variable model predict turnout? Do any of the variables seem to be insignificant? Is this a useful model, based on what you've seen? Why?
 
@@ -138,7 +136,6 @@ ggplot(model_comparison, aes(x = reorder(Model, Adjusted_R_squared), y = Adjuste
   labs(title = "Model Comparison by Adjusted R-squared",
        x = "Model")
 ```
-
 
 ## Task 4: Using the Model (3 points)
 

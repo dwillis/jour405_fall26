@@ -1,0 +1,54 @@
+---
+title: "HW15: Car Thefts and Population"
+---
+
+You've already calculated car theft rates for Maryland counties. Now your editor wants to know: does population actually predict how many cars get stolen in a county? It seems obvious that bigger counties would have more thefts, but how strong is that relationship really — and which counties break the pattern?
+
+Your task is to calculate the correlation between county population and car thefts, create a scatterplot, and identify the counties that don't fit the trend. Those outliers are where the stories are.
+
+### Task 1: Load the tidyverse
+
+```{r}
+```
+
+### Task 2: Load the car thefts data
+
+Load the data from https://raw.githubusercontent.com/dwillis/jour405/refs/heads/main/data/md_car_thefts.csv
+
+```{r}
+```
+
+### Task 3: Calculate the correlation coefficient
+
+Use `summarize()` and the `cor()` function to calculate the correlation coefficient between population and 2023 car thefts, using the pearson method. Save the result to a dataframe called `thefts_cor`.
+
+```{r}
+```
+
+### Task 4: Create a scatterplot
+
+Use `ggplot()` and `geom_point()` to create a scatterplot with population on the x-axis and 2023 car thefts on the y-axis. Add a linear trend line using `geom_smooth(method="lm")`. Be sure to label your axes and add a title.
+
+```{r}
+```
+
+### Task 5: Add county labels
+
+Recreate your scatterplot from Task 4, but replace `geom_point()` with `geom_text()` so you can see which county is which. Use `aes(label=county)` inside `geom_text()` and add `size=3` after the aes() to keep the labels readable. Which counties stand out as being above or below the trend line?
+
+```{r}
+```
+
+### Task 6: Describe the correlation
+
+Based on the correlation coefficient and the scatterplots, describe the relationship between population and car thefts. Is it strong? What does the scatterplot reveal that the correlation coefficient alone doesn't? Which counties are above the trend line (more thefts than population would predict) and which are below it?
+
+ANSWER HERE
+
+### Task 7: Think about what correlation doesn't tell us
+
+You've now shown that population and car thefts are correlated. Write 2-3 sentences explaining why this does NOT mean that population *causes* car thefts. What other variables might explain the pattern? Why would it be misleading to write a headline like "Population Growth Drives Car Theft Surge"?
+
+ANSWER HERE
+
+When you are done, save your work, switch to GitHub Desktop, then add, commit and push your changes to GitHub and submit the URL of the notebook in ELMS.

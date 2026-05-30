@@ -1,0 +1,210 @@
+---
+title: "Baltimore County 911 Calls Activity: Code Explainer"
+---
+
+This document walks through the key code patterns in the Baltimore County 911 Calls activity.
+
+## Loading multiple libraries
+
+```
+library(tidyverse)
+library(lubridate)
+library(knitr)
+library(scales)
+```
+
+Each `library()` call loads a package of functions:
+
+- `tidyverse`: The core toolkit for data manipulation (`dplyr`, `ggplot2`, etc.).
+- `lubridate`: Makes working with dates easier (extracting months, days of the week, etc.).
+- `knitr`: Provides `kable()` for printing nice tables.
+- `scales`: Provides formatting helpers like `comma` for axis labels.
+
+## Loading data from a URL
+
+```
+calls_data <- read_csv("https://raw.githubusercontent.com/...")
+```
+
+`read_csv()` reads a CSV file and turns it into a data frame. It works with both local file paths and URLs. The result is saved to `calls_data` so you can use it in later code blocks.
+
+## Exploring data structure
+
+```
+glimpse(calls_data)
+colSums(is.na(calls_data))
+```
+
+`glimpse()` shows every column name, its data type, and a preview of values. It is a quick way to understand what is in your data. `is.na()` checks each cell for missing values (TRUE/FALSE), and `colSums()` adds up the TRUEs per column, giving you a count of missing values in each column.
+
+## Counting rows per group with `count()`
+
+```
+daily_calls <- calls_data |>
+  count(date, name = "call_count")
+```
+
+`count(date)` groups the data by date and counts how many rows fall on each date. The `name = "call_count"` argument names the resulting count column instead of using the default name `n`. This is a shortcut for `group_by(date) |> summarize(call_count = n())`.
+
+## Formatting tables with `kable()`
+
+```
+head(daily_calls, 10) |> kable()
+```
+
+`head(daily_calls, 10)` takes just the first 10 rows. `kable()` formats them as a clean table in the output document, rather than the raw console-style output you get from `print()`.
+
+## Time series line chart
+
+```
+ggplot(daily_calls, aes(x = date, y = call_count)) +
+  geom_line(color = "darkblue", alpha = 0.7) +
+  geom_point(color = "darkblue", alpha = 0.5, size = 1)
+```
+
+`geom_line()` connects data points with lines. `geom_point()` adds dots at each data point. Using both together makes individual days visible while still showing the trend. `alpha` controls transparency (0 = invisible, 1 = fully opaque).
+
+## Calculating z-scores with `mutate()`
+
+```
+daily_calls <- daily_calls |>
+  mutate(
+    mean_calls = mean(call_count),
+    sd_calls = sd(call_count),
+    z_score = (call_count - mean_calls) / sd_calls
+  )
+```
+
+`mutate()` adds new columns to an existing data frame. Here it creates three: the overall mean, the overall standard deviation, and the z-score for each row. The z-score formula `(value - mean) / sd` is written directly in R. Each row gets the same mean and sd values (because there is no `group_by()`), but a different z-score based on its own call count.
+
+## Filtering with `abs()` and logical conditions
+
+```
+unusual_days <- daily_calls |>
+  filter(abs(z_score) > 2) |>
+  arrange(desc(abs(z_score)))
+```
+
+`abs()` returns the absolute value, turning negative numbers positive. `filter(abs(z_score) > 2)` keeps only rows where the z-score is more than 2 in either direction (high or low). `arrange(desc(...))` sorts the result from largest to smallest.
+
+## Conditional column with `case_when()`
+
+```
+daily_calls <- daily_calls |>
+  mutate(call_volume_type = case_when(
+    z_score > 2 ~ "Unusually High",
+    z_score < -2 ~ "Unusually Low",
+    TRUE ~ "Normal"
+  ))
+```
+
+`case_when()` works like an if/else chain for creating a new column. R checks each condition from top to bottom. The first one that is TRUE for a row determines what value goes in the new column. `TRUE ~ "Normal"` is the catch-all default — if none of the earlier conditions match, the row gets "Normal."
+
+## Coloring points by category
+
+```
+ggplot(daily_calls, aes(x = date, y = call_count, color = call_volume_type)) +
+  geom_point(size = 2) +
+  scale_color_manual(values = c("Normal" = "gray50",
+                               "Unusually High" = "red",
+                               "Unusually Low" = "blue"))
+```
+
+Setting `color = call_volume_type` inside `aes()` tells ggplot to use a different color for each category. `scale_color_manual()` lets you pick exactly which colors to use instead of relying on defaults.
+
+## Extracting date parts with `lubridate`
+
+```
+daily_calls <- daily_calls |>
+  mutate(day_of_week = wday(date, label = TRUE))
+```
+
+`wday()` extracts the day of the week from a date. `label = TRUE` returns the name ("Mon", "Tue") instead of a number (1, 2). This is from the `lubridate` package. Similarly, `month(date, label = TRUE)` and `year(date)` extract month names and year numbers.
+
+## Group-level z-scores
+
+```
+daily_calls <- daily_calls |>
+  group_by(day_of_week) |>
+  mutate(
+    dow_mean = mean(call_count),
+    dow_sd = sd(call_count),
+    dow_z_score = (call_count - dow_mean) / dow_sd
+  ) |>
+  ungroup()
+```
+
+This calculates z-scores within each day-of-week group. `group_by(day_of_week)` means the `mean()` and `sd()` inside `mutate()` are computed separately for Mondays, separately for Tuesdays, and so on. `ungroup()` at the end removes the grouping so later operations treat the data as one table again. Always call `ungroup()` when you are done with grouped calculations.
+
+## Rolling average with `zoo::rollmean()`
+
+```
+daily_calls <- daily_calls |>
+  arrange(date) |>
+  mutate(rolling_avg_7day = zoo::rollmean(call_count, k = 7, fill = NA))
+```
+
+`zoo::rollmean()` calculates a moving average. `k = 7` means it averages each day with the 3 days before and 3 days after it. `fill = NA` puts NA in the first and last few rows where a full 7-day window is not available. `zoo::` means "use the `rollmean` function from the `zoo` package" without loading the whole package.
+
+## Common mistakes
+
+**Forgetting `ungroup()` after grouped `mutate()`:**
+
+```
+# Dangerous — data stays grouped, and later operations behave unexpectedly:
+daily_calls <- daily_calls |>
+  group_by(day_of_week) |>
+  mutate(dow_mean = mean(call_count))
+
+# Safe — always ungroup when you are done:
+daily_calls <- daily_calls |>
+  group_by(day_of_week) |>
+  mutate(dow_mean = mean(call_count)) |>
+  ungroup()
+```
+
+If you forget `ungroup()`, every `mutate()`, `filter()`, and `summarize()` that follows will operate within groups. This can produce wrong results that are hard to diagnose because the code runs without errors.
+
+**Mixing up `count()` and `n()`:**
+
+```
+# count() is a standalone verb — it groups and counts for you:
+calls_data |> count(date)
+
+# n() goes INSIDE summarize() — it counts rows in the current group:
+calls_data |> group_by(date) |> summarize(call_count = n())
+```
+
+Both produce the same result, but they are not interchangeable. `n()` only works inside `summarize()` or `mutate()`.
+
+**Writing `case_when()` conditions in the wrong order:**
+
+```
+# Wrong — every row hits "Normal" first and nothing else is checked:
+case_when(
+  TRUE ~ "Normal",
+  z_score > 2 ~ "Unusually High",
+  z_score < -2 ~ "Unusually Low"
+)
+
+# Correct — specific conditions first, catch-all last:
+case_when(
+  z_score > 2 ~ "Unusually High",
+  z_score < -2 ~ "Unusually Low",
+  TRUE ~ "Normal"
+)
+```
+
+`case_when()` checks conditions from top to bottom and stops at the first match. `TRUE` matches everything, so it must go last.
+
+**Forgetting `label = TRUE` in `wday()`:**
+
+```
+# Returns numbers (1 = Sunday, 2 = Monday, ...):
+wday(date)
+
+# Returns names ("Sun", "Mon", ...):
+wday(date, label = TRUE)
+```
+
+Numbers are harder to interpret in charts and tables. Use `label = TRUE` unless you need the numbers for calculations.

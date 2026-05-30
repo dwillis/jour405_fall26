@@ -1,0 +1,70 @@
+---
+title: "Volleyball Percentiles Activity: Code Explainer"
+---
+
+This document walks through the key code patterns in the Volleyball Percentiles activity, which introduces `group_by()` with `summarize()` and the `ntile()` function.
+
+## Grouping and summarizing
+
+```
+team_aces <- matches |>
+  group_by(team) |>
+  summarize(total_aces = sum(aces)) |>
+  arrange(desc(total_aces))
+```
+
+This is one of the most common patterns in data analysis:
+
+1. `group_by(team)` splits the data into groups — one for each team.
+2. `summarize(total_aces = sum(aces))` collapses each group into one row, calculating the total aces for each team. `sum()` adds up all the values in a column.
+3. `arrange(desc(total_aces))` sorts the result from most aces to fewest.
+
+The output is a two-column table: one row per team, with their total aces. The original match-level rows are gone — `summarize()` always reduces the data to one row per group.
+
+## Calculating percentiles with `ntile()`
+
+```
+team_aces |> mutate(percentile = ntile(total_aces, 100))
+```
+
+`ntile(total_aces, 100)` divides the teams into 100 equal-sized groups based on their total aces and assigns each team a number from 1 to 100. A team in the 95th percentile has more aces than 95% of teams. You can use any number of groups — `ntile(total_aces, 4)` would create quartiles (groups of 25%).
+
+`ntile()` handles ties by putting tied values into the same group. If there are fewer rows than groups (e.g., 80 teams split into 100 percentiles), some percentile numbers will be skipped.
+
+## Common mistakes
+
+**Using `mutate()` instead of `summarize()` for totals:**
+
+```
+# Wrong — adds a column to every row, repeating the sum:
+matches |> group_by(team) |> mutate(total_aces = sum(aces))
+
+# Correct — collapses each group to one row:
+matches |> group_by(team) |> summarize(total_aces = sum(aces))
+```
+
+`mutate()` keeps all original rows and adds a column. `summarize()` reduces each group to a single row. When you want totals per team, you want `summarize()`.
+
+**Forgetting `group_by()` before `summarize()`:**
+
+```
+# Wrong — gives you the total for ALL teams combined (one row):
+matches |> summarize(total_aces = sum(aces))
+
+# Correct — gives you a total for EACH team:
+matches |> group_by(team) |> summarize(total_aces = sum(aces))
+```
+
+Without `group_by()`, `summarize()` treats the entire data frame as one group and returns a single row.
+
+**Confusing `ntile()` with `percent_rank()`:**
+
+```
+# ntile(total_aces, 100) gives integer groups from 1 to 100:
+# Result: 1, 2, 3, ..., 99, 100
+
+# percent_rank(total_aces) gives decimals from 0 to 1:
+# Result: 0.00, 0.01, 0.02, ..., 0.99, 1.00
+```
+
+Both measure relative position, but `ntile()` gives you a bin number (good for "what percentile is this team in?"), while `percent_rank()` gives you a proportion (good for calculations).

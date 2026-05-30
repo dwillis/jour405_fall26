@@ -14,7 +14,7 @@ library(tidyverse)
 ### Task 2: Load the soccer dataset from https://raw.githubusercontent.com/dwillis/NCAAWomensSoccerData/refs/heads/main/data/ncaa_womens_soccer_matchstats_2024.csv
 
 ```{r}
-matches <- read_csv("https://raw.githubusercontent.com/dwillis/NCAAWomensSoccerData/refs/heads/main/data/ncaa_womens_soccer_matchstats_2024.csv")
+matches25 <- read_csv("https://raw.githubusercontent.com/dwillis/NCAAWomensSoccerData/refs/heads/main/data/ncaa_womens_soccer_matchstats_2025.csv")
 ```
 
 

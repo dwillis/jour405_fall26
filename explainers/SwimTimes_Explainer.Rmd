@@ -1,0 +1,118 @@
+---
+title: "Swim Times Activity: Code Explainer"
+---
+
+This document walks through the key code patterns in the Swim Times activity, which performs a one-sample t-test and visualizes the null hypothesis distribution.
+
+## Setting up hypothesis test parameters as variables
+
+```
+baseline_mean <- 16.43
+baseline_sd <- 0.8
+alpha <- 0.05
+```
+
+Storing these as named variables at the top keeps the analysis organized. You reference them throughout the notebook instead of typing raw numbers, which reduces errors and makes the code self-documenting.
+
+## Calculating summary statistics in one `summarize()` call
+
+```
+swim_summary <- swim_data %>%
+  summarize(
+    sample_size = n(),
+    sample_mean = mean(time_with_goggles),
+    sample_sd = sd(time_with_goggles),
+    se = sample_sd / sqrt(sample_size),
+    t_stat = (sample_mean - baseline_mean) / se,
+    degrees_freedom = sample_size - 1,
+    p_value = pt(t_stat, degrees_freedom)
+  )
+```
+
+This computes everything in one block, with each line building on the ones above it. `n()` counts rows. `se` is the standard error. `t_stat` is the test statistic. `pt()` converts the t-statistic into a p-value — it gives the probability of getting a value this extreme or more (in the lower tail). For a one-sided test asking "is the time lower?", this is the p-value directly.
+
+## Plotting a theoretical distribution with `stat_function()`
+
+```
+ggplot() +
+  stat_function(
+    fun = function(x) dnorm(x, mean = baseline_mean, sd = baseline_sd / sqrt(15)),
+    geom = "line", color = "blue", size = 1
+  )
+```
+
+`stat_function()` draws a curve from a mathematical function rather than from data. `dnorm(x, mean, sd)` is the normal distribution's density function — it defines the bell curve shape. `baseline_sd / sqrt(15)` is the standard error, which determines how wide or narrow the curve is. This draws what the distribution of sample means would look like *if the null hypothesis were true*.
+
+`ggplot()` here is called with no data argument because the curve comes from a formula, not from a data frame.
+
+## Verifying with R's built-in `t.test()`
+
+```
+t_test_result <- t.test(
+  swim_data$time_with_goggles,
+  mu = baseline_mean,
+  alternative = "less"
+)
+```
+
+After calculating the t-statistic and p-value manually, you can verify your work by running R's built-in `t.test()`. The results should match (or be very close). This is a good practice — manual calculation helps you understand the process, and the built-in function confirms you did it right.
+
+## Building a results table with `tibble()` and `ifelse()`
+
+```
+results_table <- tibble(
+  Metric = c("Baseline Mean (without goggles)", "Sample Mean (with goggles)", ...),
+  Value = c(baseline_mean, round(swim_summary$sample_mean, 2), ...)
+)
+```
+
+Creating a two-column table of labels and values is a clean way to present all the key numbers from an analysis. `ifelse(condition, "Yes", "No")` is the base R version of `if_else()` — both work the same way for simple TRUE/FALSE decisions.
+
+## Inline R in the conclusion text
+
+```
+Jeffrey's mean swim time with goggles (approximately `r round(swim_summary$sample_mean, 2)` seconds)
+```
+
+The backtick-r syntax (`` `r expression` ``) lets you embed R calculations directly in your narrative text. When the notebook renders, R replaces this with the actual number. This means your written conclusions automatically update if the data changes.
+
+## Common mistakes
+
+**Using `pt()` when you need `1 - pt()`:**
+
+```
+# pt() gives the probability of being at or BELOW the t-statistic:
+pt(-2.5, df = 14)  # probability in the lower tail
+
+# For "at or ABOVE," use 1 - pt():
+1 - pt(2.5, df = 14)
+
+# Or use lower.tail = FALSE:
+pt(2.5, df = 14, lower.tail = FALSE)
+```
+
+For a one-sided test asking "is the time lower?", `pt()` on a negative t-statistic gives you the p-value directly. For "is the time higher?", you need `1 - pt()`.
+
+**Calling `stat_function()` with data instead of a formula:**
+
+```
+# Wrong — stat_function() does not take a data column:
+stat_function(aes(x = swim_times))
+
+# Correct — give it a mathematical function:
+stat_function(fun = function(x) dnorm(x, mean = 16.43, sd = 0.2))
+```
+
+`stat_function()` draws a curve from a formula. For plotting data, use `geom_histogram()` or `geom_density()`.
+
+**Forgetting to divide by `sqrt(n)` for the standard error:**
+
+```
+# Wrong — this is the standard deviation, not the standard error:
+se = sample_sd
+
+# Correct:
+se = sample_sd / sqrt(sample_size)
+```
+
+Standard error is always the standard deviation divided by the square root of the sample size. Forgetting the division makes the standard error too large, which makes confidence intervals too wide and t-statistics too small.

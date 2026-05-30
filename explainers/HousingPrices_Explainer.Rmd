@@ -1,0 +1,132 @@
+---
+title: "Housing Prices Activity: Code Explainer"
+---
+
+This document walks through the key code patterns in the Housing Prices activity, which combines hypothesis testing, confidence intervals, and effect size in a single story scenario.
+
+## Storing known values as variables
+
+```
+prior_mean <- 285000
+prior_sd <- 32000
+new_prices <- c(297000, 305000, 292000, 318000, ...)
+```
+
+When you have baseline numbers from before a change (like the old average home price and its standard deviation), store them as named variables at the top of your analysis. This makes the code easier to read and change. `c()` creates a vector — a list of numbers you can do math on.
+
+## Creating a tibble from a vector
+
+```
+home_data <- tibble(
+  sale_id = 1:14,
+  sale_price = new_prices
+)
+```
+
+`1:14` generates the sequence 1, 2, 3, ... 14. This gives each home sale a row number. `tibble()` combines the IDs and prices into a two-column table. This is useful when your raw data is just a list of numbers rather than a CSV file.
+
+## One-sample t-test (one-sided)
+
+```
+t_test_result <- t.test(
+  home_data$sale_price,
+  mu = prior_mean,
+  alternative = "greater"
+)
+```
+
+This tests whether the new prices are significantly *higher* than the old average. `mu = prior_mean` sets the comparison value (285000). `alternative = "greater"` makes it a one-sided test — you are only asking "are prices higher?", not "are they different in either direction?" Use `"less"` if you are testing for a decrease, or `"two.sided"` if you do not have a directional hypothesis.
+
+## Extracting the confidence interval from a t-test
+
+```
+ci <- t.test(home_data$sale_price)$conf.int
+```
+
+Running `t.test()` without `mu` or `alternative` gives you a two-sided 95% confidence interval for the mean. `$conf.int` extracts just the interval. `ci[1]` is the lower bound and `ci[2]` is the upper bound.
+
+## Building a custom formatting function
+
+```
+dollar_format <- function(x) {
+  paste0("$", format(x/1000, big.mark=","), "K")
+}
+```
+
+This creates a helper function that turns a number like 285000 into "$285K". `x/1000` divides by 1000. `format(..., big.mark=",")` adds comma separators. `paste0()` is like `paste()` but does not add spaces between pieces. Custom formatting functions help you display numbers consistently throughout your analysis.
+
+## Adding annotations to a histogram
+
+```
+annotate("text", x = prior_mean - 1000, y = 3.5,
+         label = "Previous Avg ($285K)", hjust = 1, fontface = "bold", color = "darkred")
+```
+
+`annotate("text", ...)` places text directly on a chart at specific x/y coordinates. Unlike `geom_text()` which maps labels from data, `annotate()` lets you place a single label manually. `hjust = 1` right-aligns the text (0 = left-aligned, 0.5 = centered). `fontface = "bold"` makes it bold.
+
+## Using `if_else()` for a single column decision
+
+```
+`Significant?` = if_else(p_value < alpha, "Yes", "No")
+```
+
+`if_else()` is the tidyverse version of `ifelse()`. It checks a condition for each row and returns one value if TRUE and another if FALSE. This is simpler than `case_when()` when you only have two possible outcomes.
+
+## Cohen's d calculated directly
+
+```
+effect_size <- (mean(new_prices) - prior_mean) / prior_sd
+```
+
+This is the effect size formula written as a single line. You do not need a custom function for it — just subtract the two means and divide by the standard deviation. The result tells you how many standard deviations apart the two means are.
+
+## Labeling effect sizes with `case_when()`
+
+```
+effect_size_label <- case_when(
+  abs(effect_size) < 0.2 ~ "Negligible",
+  abs(effect_size) < 0.5 ~ "Small",
+  abs(effect_size) < 0.8 ~ "Medium",
+  TRUE ~ "Large"
+)
+```
+
+This translates a number into a word. The conditions are checked in order, so a value of 0.3 hits "Small" (because it passed the first check but not the second). `TRUE ~` is the catch-all for anything 0.8 or above.
+
+## Common mistakes
+
+**Confusing `paste()` and `paste0()`:**
+
+```
+# paste() adds a space between each piece:
+paste("$", 285, "K")   # gives "$ 285 K"
+
+# paste0() does NOT add spaces:
+paste0("$", 285, "K")  # gives "$285K"
+```
+
+Use `paste0()` when you are building formatted strings where spaces would be unwanted (like currency).
+
+**Using `annotate()` when you need `geom_text()`:**
+
+```
+# annotate() places ONE label at fixed coordinates:
+annotate("text", x = 300000, y = 5, label = "My label")
+
+# geom_text() places labels from DATA — one per row:
+geom_text(aes(x = sale_price, y = count, label = sale_id))
+```
+
+Use `annotate()` for manually-placed annotations (like marking a reference point). Use `geom_text()` when each data point gets its own label.
+
+**Swapping the values in Cohen's d:**
+
+```
+# Wrong — gives you a negative d when it should be positive:
+effect_size <- (prior_mean - mean(new_prices)) / prior_sd
+
+# Correct — new mean minus old mean:
+effect_size <- (mean(new_prices) - prior_mean) / prior_sd
+```
+
+The direction matters for interpretation. A positive d means the new values are higher; a negative d means they are lower. Match the order to your hypothesis.

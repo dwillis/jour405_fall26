@@ -1,0 +1,120 @@
+---
+title: "Sleep Confidence Intervals Activity: Code Explainer"
+---
+
+This document walks through the key code patterns in the Sleep Confidence Intervals activity.
+
+## Calculating standard error inside `mutate()`
+
+```
+sleep_stats <- sleep_stats |>
+  mutate(se_hours = sd_hours / sqrt(37))
+```
+
+Standard error is the standard deviation divided by the square root of the sample size. This tells you how much uncertainty there is in your sample mean. Note that `sleep_stats` here is a one-row summary table (created by a previous `summarize()`), so `mutate()` adds new columns to that one-row table. You can use `mutate()` on any data frame, regardless of how many rows it has.
+
+## Using `qt()` for the t-distribution critical value
+
+```
+sleep_stats <- sleep_stats |>
+  mutate(
+    t_critical = qt(0.975, df = n - 1),
+    margin_error = t_critical * se_hours,
+    ci_lower = mean_hours - margin_error,
+    ci_upper = mean_hours + margin_error
+  )
+```
+
+`qt(0.975, df = n - 1)` gives you the critical value from the t-distribution. The 0.975 corresponds to a 95% confidence interval — you want 2.5% in each tail, so you look up the 97.5th percentile. `df = n - 1` is degrees of freedom (sample size minus 1). The critical value is then multiplied by the standard error to get the margin of error.
+
+Each line builds on the previous: `t_critical` feeds into `margin_error`, which feeds into `ci_lower` and `ci_upper`. This works because `mutate()` evaluates columns in the order you write them.
+
+## Selecting specific columns for display
+
+```
+sleep_stats |> select(mean_hours, margin_error, ci_lower, ci_upper)
+```
+
+`select()` picks which columns to show. This is useful when a data frame has many columns but you only want to display a few for readability.
+
+## Layering annotations on a histogram
+
+```
+ggplot(sleep_data, aes(x = hours)) +
+  geom_histogram(binwidth = 0.5, fill = "skyblue", color = "white", alpha = 0.7) +
+  geom_vline(xintercept = sleep_stats$mean_hours, color = "red", linewidth = 1) +
+  geom_vline(xintercept = sleep_stats$ci_lower, color = "blue", linetype = "dashed") +
+  geom_vline(xintercept = sleep_stats$ci_upper, color = "blue", linetype = "dashed") +
+  annotate("rect", xmin = sleep_stats$ci_lower, xmax = sleep_stats$ci_upper,
+           ymin = 0, ymax = Inf, fill = "blue", alpha = 0.1)
+```
+
+This chart layers several elements:
+
+1. `geom_histogram()` draws the bars.
+2. `geom_vline()` adds vertical lines at the mean and confidence interval bounds.
+3. `annotate("rect", ...)` draws a shaded rectangle. `xmin` and `xmax` set the horizontal boundaries (the confidence interval). `ymin = 0` and `ymax = Inf` make it extend the full height of the chart. `alpha = 0.1` makes it nearly transparent so the bars show through.
+
+## Conditional text with `if_else()`
+
+```
+meets_cdc = if_else(ci_lower >= cdc_recommendation,
+  "Yes - entire CI is at or above 7",
+  "No - CI includes values below 7")
+```
+
+`if_else()` checks a condition and returns one of two text strings. Here it checks whether the lower bound of the confidence interval is at or above the CDC recommendation. This turns a number into a readable answer.
+
+## Hypothetical scenario with manual values
+
+```
+hypothetical_n <- 100
+
+hypothetical_stats <- tibble(
+  mean_hours = sleep_stats$mean_hours,
+  sd_hours = sleep_stats$sd_hours,
+  n = hypothetical_n,
+  se_hours = sd_hours / sqrt(hypothetical_n),
+  ...
+)
+```
+
+You can create a tibble with made-up or hypothetical values to see what would change. Here, the activity keeps the same mean and standard deviation but changes the sample size to 100, showing how a larger sample narrows the confidence interval. `sleep_stats$mean_hours` pulls a value from the earlier summary table.
+
+## Common mistakes
+
+**Using `qnorm()` instead of `qt()` for small samples:**
+
+```
+# Wrong for small samples — uses the normal distribution:
+qnorm(0.975)  # returns 1.96
+
+# Correct for small samples — uses the t-distribution:
+qt(0.975, df = 36)  # returns 2.028
+```
+
+For large samples (n > 30 or so), `qnorm()` and `qt()` give similar results. For small samples, the t-distribution gives wider intervals, which is more appropriate because small samples have more uncertainty.
+
+**Using 0.95 instead of 0.975 for a 95% CI:**
+
+```
+# Wrong — this gives a 90% confidence interval:
+qt(0.95, df = 36)
+
+# Correct — 0.975 because you split the remaining 5% between two tails:
+qt(0.975, df = 36)
+```
+
+A 95% CI leaves 5% total in the tails — 2.5% on each side. So you look up the 97.5th percentile (0.975), not the 95th.
+
+**Confusing standard deviation with standard error:**
+
+```
+# Standard deviation — how spread out INDIVIDUAL values are:
+sd(sleep_data$hours)  # might be 1.5 hours
+
+# Standard error — how much the SAMPLE MEAN would vary across samples:
+sd(sleep_data$hours) / sqrt(37)  # much smaller, maybe 0.25 hours
+```
+
+Standard deviation describes the data. Standard error describes the uncertainty in the average. The confidence interval uses standard error, not standard deviation.

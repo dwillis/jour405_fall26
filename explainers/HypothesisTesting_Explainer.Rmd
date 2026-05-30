@@ -1,0 +1,95 @@
+---
+title: "Hypothesis Testing Activity: Code Explainer"
+---
+
+This document walks through the key code patterns in the Hypothesis Testing activity (community policing response times). Most core patterns are covered in other explainers — this focuses on what is distinct here.
+
+## Entering raw data as a vector
+
+```
+response_times <- c(
+  7.8, 8.1, 7.5, 7.9, 8.3,
+  7.6, 7.4, 8.0, 7.7, 7.8,
+  8.2, 7.3, 7.9, 7.5, 8.1,
+  7.6, 7.8, 7.4, 7.7, 7.9
+)
+```
+
+When your data is small enough (here, 20 values), you can type it directly into a `c()` call. The line breaks are just for readability — R treats it as one list. Store it in a named variable so you can reuse it.
+
+## Calculating standard error
+
+```
+summary_stats <- response_data |>
+  summarize(
+    sample_size = n(),
+    sample_mean = mean(response_time),
+    sample_sd = sd(response_time),
+    standard_error = sample_sd / sqrt(sample_size)
+  )
+```
+
+Inside `summarize()`, you can reference columns you just created in the same call. Here, `standard_error` uses `sample_sd` and `sample_size`, both of which are defined in the lines above it within the same `summarize()`. This works because R evaluates the lines in order. `sqrt()` is the square root function.
+
+## One-sided t-test for decrease
+
+```
+t_test_result <- t.test(
+  response_data$response_time,
+  mu = 8.2,
+  alternative = "less"
+)
+```
+
+`alternative = "less"` tests whether the new values are significantly *lower* than the comparison value. This makes sense when you are testing whether something decreased (response times, crime rates, costs). The p-value will only be small if the data is consistently below `mu`.
+
+## Combining text and numbers with `paste()` and `round()`
+
+```
+annotate("text", x = baseline_mean + 0.05, y = 4,
+         label = paste("Baseline:", baseline_mean),
+         color = "red", hjust = 0, fontface = "bold")
+```
+
+`paste("Baseline:", baseline_mean)` produces a string like "Baseline: 8.2" by gluing the text and the number together with a space. `round()` can be added when you need to control decimal places: `paste("Mean:", round(value, 2))`.
+
+## Converting minutes to seconds
+
+```
+`Difference in seconds` = round((baseline_mean - summary_stats$sample_mean) * 60, 0)
+```
+
+Multiplying a number in minutes by 60 converts it to seconds. `round(..., 0)` rounds to a whole number. This kind of unit conversion helps make findings concrete for readers — "25 seconds" is more intuitive than "0.42 minutes."
+
+## Common mistakes
+
+**Using `alternative = "two.sided"` when you mean `"less"`:**
+
+```
+# Tests if response times are DIFFERENT (higher or lower):
+t.test(response_data$response_time, mu = 8.2, alternative = "two.sided")
+
+# Tests specifically if response times DECREASED:
+t.test(response_data$response_time, mu = 8.2, alternative = "less")
+```
+
+A two-sided test splits the significance threshold between both tails, making it harder to find significance in one direction. If you have a directional hypothesis ("times went down"), use a one-sided test.
+
+**Referencing columns that do not exist yet:**
+
+```
+# Wrong — standard_error does not exist until this summarize() runs:
+response_data |>
+  filter(standard_error < 0.5) |>
+  summarize(standard_error = sample_sd / sqrt(sample_size))
+
+# Correct — create the column first, then reference it:
+response_data |>
+  summarize(
+    sample_sd = sd(response_time),
+    sample_size = n(),
+    standard_error = sample_sd / sqrt(sample_size)
+  )
+```
+
+Inside `summarize()`, you can reference columns defined above in the same call. But you cannot reference them in a *previous* verb in the pipe. Create the column first, then use it.

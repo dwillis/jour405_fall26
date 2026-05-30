@@ -1,0 +1,79 @@
+---
+title: "Soccer Fouls Activity: Code Explainer"
+---
+
+This document walks through the key code patterns in the Soccer Fouls activity, which calculates correlation and creates a scatterplot.
+
+## Creating a new column with arithmetic
+
+```
+matches <- matches |> mutate(goal_diff = team_score - opponent_score)
+```
+
+`mutate()` creates a new column by doing math on existing columns, row by row. `team_score - opponent_score` subtracts the opponent's goals from the team's goals for every match. Positive values mean a win, negative values mean a loss, and zero is a draw.
+
+## Calculating correlation with `cor()` inside `summarize()`
+
+```
+matches |> summarize(correlation = cor(fouls, goal_diff, method = "pearson"))
+```
+
+`cor()` calculates the correlation coefficient between two columns. `method = "pearson"` specifies the Pearson method, which measures linear correlation. The result is a single number between -1 and 1. Values near 0 mean little or no linear relationship; values near 1 or -1 mean a strong positive or negative relationship. Wrapping it in `summarize()` returns a clean one-row table.
+
+## Scatterplot with trend line
+
+```
+matches |>
+  ggplot() +
+  geom_point(aes(x = goal_diff, y = fouls)) +
+  geom_smooth(aes(x = goal_diff, y = fouls), method = "lm")
+```
+
+`geom_point()` draws one dot per match. `geom_smooth(method = "lm")` adds a linear trend line. Notice that both layers have the same `aes()` — you could simplify this by putting `aes(x = goal_diff, y = fouls)` inside the `ggplot()` call instead:
+
+```
+matches |>
+  ggplot(aes(x = goal_diff, y = fouls)) +
+  geom_point() +
+  geom_smooth(method = "lm")
+```
+
+When you put `aes()` in `ggplot()`, all layers inherit it. When you put it in a specific `geom_`, only that layer uses it. Both approaches produce the same chart here.
+
+## Common mistakes
+
+**Mixing up `cor()` and `cor.test()`:**
+
+```
+# cor() inside summarize() — gives you just the number:
+matches |> summarize(correlation = cor(fouls, goal_diff))
+
+# cor.test() — gives you the number, p-value, and confidence interval,
+# but does NOT work inside summarize():
+cor.test(matches$fouls, matches$goal_diff)
+```
+
+Use `cor()` for a quick number. Use `cor.test()` when you need to know if the correlation is statistically significant. But `cor.test()` is a standalone function — it does not go inside `summarize()`.
+
+**Putting x and y on the wrong axes:**
+
+```
+# This puts goal_diff on x and fouls on y:
+geom_point(aes(x = goal_diff, y = fouls))
+
+# This reverses them:
+geom_point(aes(x = fouls, y = goal_diff))
+```
+
+Convention is to put the *predictor* (the thing you think causes something) on the x-axis and the *outcome* on the y-axis. But for correlation, which just measures association, either order works — just be consistent between the chart and your written interpretation.
+
+**Forgetting to create a column before using it:**
+
+```
+# Error — goal_diff does not exist yet:
+matches |> summarize(correlation = cor(fouls, goal_diff))
+
+# Fix — create it first with mutate():
+matches <- matches |> mutate(goal_diff = team_score - opponent_score)
+matches |> summarize(correlation = cor(fouls, goal_diff))
+```

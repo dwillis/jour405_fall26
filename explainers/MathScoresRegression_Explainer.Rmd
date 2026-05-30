@@ -1,0 +1,114 @@
+---
+title: "Math Scores Regression Activity: Code Explainer"
+---
+
+This document walks through the key code patterns in the Math Scores Regression activity, which investigates whether poverty predicts math scores and demonstrates what happens when data quality issues affect a regression model.
+
+## Sorting data to inspect extremes
+
+```
+schools |> arrange(desc(`FARMS Pct`)) |> head(10)
+schools |> arrange(`FARMS Pct`) |> head(10)
+```
+
+`arrange(desc(...))` sorts from highest to lowest; `arrange(...)` without `desc()` sorts from lowest to highest. `head(10)` takes just the first 10 rows. Looking at both ends of a column is a quick way to spot suspicious values — like schools with a FARMS percentage of exactly 100%.
+
+## Scatterplot with regression line
+
+```
+schools |>
+  ggplot(aes(x = `FARMS Pct`, y = `% Met or Exceeded Math Expectations`)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE, color = "red")
+```
+
+`geom_point()` draws the dots. `geom_smooth(method = "lm")` draws a straight regression line through them. `se = FALSE` hides the confidence band around the line, keeping the chart cleaner. Always plot your data before running a regression — the scatterplot often reveals problems that the numbers alone will not show.
+
+## Running a simple regression and reading the output
+
+```
+model <- lm(`% Met or Exceeded Math Expectations` ~ `FARMS Pct`, data = schools)
+summary(model)
+```
+
+Three things to find in the output:
+
+1. **p-value for the predictor**: In the Coefficients table, look at the `Pr(>|t|)` column for the `FARMS Pct` row. A small p-value means the relationship is statistically significant.
+2. **Adjusted R-squared**: Found near the bottom. This is a percentage — a value of 0.025 means the predictor explains only 2.5% of the variation. Low R-squared means the model is not very useful for prediction.
+3. **Coefficient (slope)**: The `Estimate` for `FARMS Pct`. A negative value means higher FARMS percentage is associated with lower math scores.
+
+## Filtering out suspicious data and rerunning
+
+```
+schools_filtered <- schools |> filter(`FARMS Pct` < 100)
+model_filtered <- lm(`% Met or Exceeded Math Expectations` ~ `FARMS Pct`, data = schools_filtered)
+summary(model_filtered)
+```
+
+`filter(\`FARMS Pct\` < 100)` removes all schools where the FARMS percentage is exactly 100. Then you rerun the same regression on the cleaned data. Comparing the two models side by side shows how a few extreme values can change the coefficient, p-value, and R-squared.
+
+## Extracting model components with `coef()` and `summary()$`
+
+```
+cat("  Coefficient:", coef(model)[2], "\n")
+cat("  p-value:", summary(model)$coefficients[2,4], "\n")
+cat("  Adjusted R-squared:", summary(model)$adj.r.squared, "\n")
+```
+
+`coef(model)` returns the model's coefficients as a named vector. `[2]` gets the second one (the slope — the first is the intercept). `summary(model)$coefficients` is a matrix of all coefficient information; `[2,4]` gets the p-value (row 2, column 4). `summary(model)$adj.r.squared` extracts the adjusted R-squared directly.
+
+## Adding predictions and residuals as columns
+
+```
+schools_filtered <- schools_filtered |>
+  mutate(
+    predicted = predict(model_filtered),
+    residual = `% Met or Exceeded Math Expectations` - predicted,
+    abs_residual = abs(residual)
+  ) |>
+  arrange(desc(abs_residual))
+```
+
+`predict(model_filtered)` generates the model's predicted value for each row. `residual` is the difference between reality and prediction. `abs_residual` is the absolute value of the residual, which lets you sort by the size of the error regardless of direction. `arrange(desc(abs_residual))` puts the worst predictions at the top.
+
+## Selecting specific columns for display
+
+```
+head(schools_filtered |> select(1, `FARMS Pct`, `% Met or Exceeded Math Expectations`, predicted, residual), 10)
+```
+
+`select(1, ...)` keeps the first column (by position) plus named columns. This is useful when you want to show a focused view of a wide data frame. `head(..., 10)` limits the output to 10 rows.
+
+## Common mistakes
+
+**Running `predict()` on a different data frame than the model used:**
+
+```
+# Wrong — model was built on schools_filtered, but predict uses the full dataset:
+predict(model_filtered, newdata = schools)
+
+# Correct — use the same data frame (or a new one with the same columns):
+predict(model_filtered)  # defaults to the training data
+```
+
+If the new data frame has different rows, the predictions will not match up when you add them back as a column.
+
+**Reading R-squared as a percentage without multiplying:**
+
+```
+# The output says: Adjusted R-squared: 0.025
+# Wrong interpretation: "25% of the variation is explained"
+# Correct interpretation: "2.5% of the variation is explained"
+```
+
+R-squared is already a proportion. A value of 0.025 means 2.5%, not 25%. Do not multiply by 100 unless you want to express it as a percentage explicitly.
+
+**Treating residuals from a weak model as meaningful:**
+
+```
+# If R-squared is 0.02, the model barely explains anything.
+# Saying "School X is over-performing based on the model" is misleading
+# because the model itself is unreliable.
+```
+
+Residuals are only meaningful if the model is a good fit. With a very low R-squared, the residuals mostly reflect noise, not real over- or under-performance.

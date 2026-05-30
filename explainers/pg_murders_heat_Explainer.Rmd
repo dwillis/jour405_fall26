@@ -1,0 +1,73 @@
+---
+title: "PG Murders and Heat Activity: Code Explainer"
+---
+
+This document walks through the key code patterns in the PG Murders and Heat activity, which explores the correlation between temperature and homicides using a scatterplot.
+
+## Scatterplot with labels using `geom_text()`
+
+```
+pg_murders_heat |>
+  ggplot() +
+  geom_text(aes(x = temperature, y = murders, label = month), size = 5) +
+  geom_smooth(aes(x = temperature, y = murders), method = "lm")
+```
+
+`geom_text()` works like `geom_point()` but replaces dots with text labels. `label = month` tells it to use the month column as the label for each point. `size = 5` controls how large the text is (this is in millimeters, not the same as font size). This lets you see which months are which directly on the chart, without needing a separate legend.
+
+The difference between `geom_point()` and `geom_text()`:
+- `geom_point()` draws dots at each position. Clean but anonymous.
+- `geom_text()` draws text at each position. More informative but can overlap if points are close together.
+
+You can use both together (dots with labels offset slightly) by adding `hjust` or `vjust` to nudge the text away from the point location.
+
+## Putting `method` in the right place
+
+```
+# Correct:
+geom_smooth(aes(x = temperature, y = murders), method = "lm")
+
+# Incorrect (but a common mistake):
+geom_smooth(aes(x = temperature, y = murders, method = "lm"))
+```
+
+`method = "lm"` belongs *outside* the `aes()` call, not inside it. `aes()` is for mapping columns to visual properties (x position, y position, color, size, label). `method` is a setting for how `geom_smooth()` behaves — it is not a column in your data. Putting it inside `aes()` will not cause an error but it will not work as intended.
+
+## Common mistakes
+
+**Overlapping labels with `geom_text()`:**
+
+```
+# Labels pile on top of each other when points are close:
+geom_text(aes(x = temperature, y = murders, label = month), size = 5)
+
+# Fix — nudge labels slightly and hide overlaps:
+geom_text(aes(x = temperature, y = murders, label = month),
+          size = 5, check_overlap = TRUE, nudge_y = 0.5)
+```
+
+`check_overlap = TRUE` hides labels that would overlap. `nudge_y = 0.5` pushes labels up slightly so they do not sit directly on the point. You can also use `geom_label()` for labels with a background box.
+
+**Using `geom_text()` without `label` in `aes()`:**
+
+```
+# Error — geom_text() does not know what to write:
+geom_text(aes(x = temperature, y = murders))
+
+# Correct — always include label:
+geom_text(aes(x = temperature, y = murders, label = month))
+```
+
+`geom_point()` does not need a `label` because it draws dots. `geom_text()` draws text, so it needs to know which column provides the text.
+
+**Confusing correlation with causation in interpretation:**
+
+```
+# The code correctly calculates a correlation:
+cor(murders, temperature)  # returns 0.7
+
+# But saying "heat causes murders" goes beyond what the data shows.
+# Correlation shows an association, not a cause-and-effect relationship.
+```
+
+This is not a code mistake, but a reporting mistake. High correlation means two things move together — it does not prove one causes the other.

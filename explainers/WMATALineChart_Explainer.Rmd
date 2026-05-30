@@ -1,0 +1,83 @@
+---
+title: "WMATA Line Chart Activity: Code Explainer"
+---
+
+This document walks through the key code patterns in the WMATA Line Chart activity, which aggregates daily data to weekly totals and creates a line chart.
+
+## Aggregating dates with `floor_date()`
+
+```
+weekly_wmata <- wmata |>
+  mutate(week = floor_date(date, "week")) |>
+  group_by(week) |>
+  summarize(
+    weekly_total = sum(total),
+    days = n()
+  ) |>
+  filter(days == 7)
+```
+
+`floor_date(date, "week")` rounds each date down to the start of its week (the preceding Sunday). All days in the same week get the same value, so you can then `group_by(week)` to aggregate. `sum(total)` adds up daily ridership within each week. `n()` counts how many days fell in that week.
+
+`filter(days == 7)` removes partial weeks (like the first and last weeks in the data, which might only have 3 or 4 days). Including partial weeks would make them look artificially low on the chart.
+
+You can also use `"month"`, `"quarter"`, or `"year"` instead of `"week"` to aggregate at different levels.
+
+## Line chart with trend line
+
+```
+weekly_wmata |>
+  ggplot(aes(x = week, y = weekly_total)) +
+  geom_line(color = "steelblue") +
+  geom_smooth(method = "lm", se = FALSE, color = "red", linetype = "dashed") +
+  scale_y_continuous(labels = scales::comma)
+```
+
+`geom_line()` connects the weekly data points with a line. `geom_smooth(method = "lm")` overlays a straight trend line, making it easier to see whether ridership is generally going up or down. `linetype = "dashed"` makes the trend line visually distinct from the data line.
+
+`scale_y_continuous(labels = scales::comma)` formats the y-axis numbers with commas (1,500,000 instead of 1500000). The `scales::comma` part is a formatting function from the `scales` package — you do not need to load the full package when you reference it this way.
+
+## Common mistakes
+
+**Forgetting to filter partial weeks:**
+
+```
+# Wrong — includes partial first/last weeks that look artificially low:
+weekly_wmata <- wmata |>
+  mutate(week = floor_date(date, "week")) |>
+  group_by(week) |>
+  summarize(weekly_total = sum(total))
+
+# Correct — count days per week and keep only full weeks:
+weekly_wmata <- wmata |>
+  mutate(week = floor_date(date, "week")) |>
+  group_by(week) |>
+  summarize(weekly_total = sum(total), days = n()) |>
+  filter(days == 7)
+```
+
+A partial week (say, only 3 days) will have a much lower total than a full week. Without filtering, it creates a misleading dip at the start or end of your chart.
+
+**Using `geom_bar()` when you mean `geom_line()`:**
+
+```
+# geom_bar() — for categorical x-axis (days of week, categories):
+ggplot(data, aes(x = category, y = total)) + geom_bar(stat = "identity")
+
+# geom_line() — for continuous x-axis (dates, time series):
+ggplot(data, aes(x = date, y = total)) + geom_line()
+```
+
+Line charts connect points over a continuous sequence (like time). Bar charts compare discrete categories. Using bars for time series data makes the chart harder to read.
+
+**Forgetting `method = "lm"` in `geom_smooth()`:**
+
+```
+# Without method, geom_smooth() uses a curvy line (LOESS by default):
+geom_smooth()
+
+# With method = "lm", it draws a STRAIGHT trend line:
+geom_smooth(method = "lm")
+```
+
+LOESS (the default) follows the data closely and curves. A linear trend line (`"lm"`) shows the overall direction. Use `"lm"` when you want to show whether something is generally going up or down.

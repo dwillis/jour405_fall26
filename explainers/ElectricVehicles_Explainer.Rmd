@@ -1,0 +1,140 @@
+---
+title: "Electric Vehicles Activity: Code Explainer"
+---
+
+This document walks through the key code patterns in the Electric Vehicles activity, which combines per capita rates, correlation, regression, and small-multiples charts.
+
+## Creating multiple new columns at once
+
+```
+vehicle_data <- vehicle_data |>
+  mutate(
+    Total_Registrations = Electric + Hybrid,
+    Electric_per_1000 = (Electric / Population) * 1000,
+    Hybrid_per_1000 = (Hybrid / Population) * 1000
+  )
+```
+
+You can create several columns in a single `mutate()` call. Each line creates one column. R evaluates them in order, so later columns can reference earlier ones defined in the same call (though this example does not do that). Here, the per-1000 columns normalize the raw counts by population.
+
+## Sorting with `arrange()`
+
+```
+vehicle_data |> arrange(desc(Electric_per_1000))
+```
+
+`arrange()` sorts rows. `desc()` means descending (highest first). Without `desc()`, it sorts ascending (lowest first). This is useful for finding which county has the highest per capita rate.
+
+## Paired t-test
+
+```
+t_test <- t.test(vehicle_data$Electric, vehicle_data$Hybrid, paired = TRUE)
+```
+
+A *paired* t-test compares two measurements from the same units (here, electric and hybrid counts from the same counties). `paired = TRUE` tells R that the first value in `Electric` corresponds to the first value in `Hybrid`, and so on. This is different from an unpaired t-test, which treats the two groups as independent.
+
+## Linear regression with `lm()`
+
+```
+model <- lm(Hybrid ~ Electric, data = vehicle_data)
+summary(model)
+```
+
+`lm()` fits a linear regression. `Hybrid ~ Electric` means "predict Hybrid using Electric." The output from `summary(model)` includes coefficients (intercept and slope), R-squared (how much variation is explained), and p-values for each term.
+
+## Working with residuals
+
+```
+residuals <- residuals(model)
+summary(residuals)
+```
+
+`residuals(model)` extracts the difference between each actual value and what the model predicted. Large positive residuals mean the actual value was much higher than predicted; large negative residuals mean it was lower. `summary()` on residuals gives you the min, max, median, and quartiles.
+
+## Adding predictions and residuals to the data
+
+```
+predictions <- predict(model, newdata = vehicle_data)
+vehicle_data$Predicted_Hybrid <- predictions
+vehicle_data$Residuals <- residuals
+```
+
+`predict()` generates the model's predicted values for each row. You can then add these as new columns using `$` assignment. This lets you see, row by row, what the model expected vs. what actually happened.
+
+## Converting text dates with `ym()`
+
+```
+county_evs <- county_evs |>
+  mutate(Year_Month = ym(Year_Month))
+```
+
+`ym()` is a `lubridate` function that converts a text string in year-month format (like "2023-06") into a proper date. Once converted, R can plot it correctly on a time axis and do date math. Other variants: `ymd()` for year-month-day, `mdy()` for month-day-year.
+
+## Regression over time
+
+```
+model_electric <- lm(ELECTRIC ~ Year_Month, data = county_evs)
+```
+
+You can use a date column as a predictor in regression. R treats dates as numbers behind the scenes, so this asks: "as time moves forward, do electric vehicle registrations increase?" The slope tells you the average change per unit of time.
+
+## Scatterplot with trend line using `geom_smooth()`
+
+```
+ggplot(county_evs, aes(x = Year_Month, y = ELECTRIC)) +
+  geom_point() +
+  geom_smooth(method = "lm", color = "blue")
+```
+
+`geom_smooth(method = "lm")` adds a linear trend line on top of the scatterplot. By default it also shows a gray confidence band. The trend line comes from the same type of linear regression you ran with `lm()`, just drawn directly on the chart.
+
+## Small multiples with `facet_wrap()`
+
+```
+ggplot(vehicle_data, aes(x = Year_Month)) +
+  geom_line(aes(y = ELECTRIC, colour = "Electric")) +
+  geom_line(aes(y = `PLUG-IN HYBRID`, colour = "Plug-In Hybrid")) +
+  facet_wrap(~County)
+```
+
+`facet_wrap(~County)` creates a separate mini-chart for each county, all sharing the same axes. This makes it easy to compare trends across many groups at once. The `~` is required syntax — it tells `facet_wrap` which column to split on.
+
+Two `geom_line()` layers are used to plot two different columns on the same chart. Each gets a different color label through the `colour` aesthetic, and `scale_color_manual()` controls the actual colors.
+
+## Common mistakes
+
+**Confusing `paired = TRUE` with an unpaired test:**
+
+```
+# Paired — compares the SAME counties' electric vs. hybrid counts:
+t.test(vehicle_data$Electric, vehicle_data$Hybrid, paired = TRUE)
+
+# Unpaired — treats them as unrelated groups (wrong here):
+t.test(vehicle_data$Electric, vehicle_data$Hybrid)
+```
+
+Use `paired = TRUE` when both measurements come from the same units (same counties, same people, same schools). Use unpaired when the groups are independent.
+
+**Forgetting `~` in `facet_wrap()`:**
+
+```
+# Error:
+facet_wrap(County)
+
+# Correct:
+facet_wrap(~County)
+```
+
+The `~` is required — it is formula syntax that tells `facet_wrap()` which column to use for splitting.
+
+**Adding predictions to the wrong data frame:**
+
+```
+# Wrong — adds columns to the original data, not the filtered version:
+vehicle_data$Predicted <- predict(model_filtered)
+
+# Correct — match predictions to the data the model was built on:
+filtered_data$Predicted <- predict(model_filtered)
+```
+
+`predict(model)` generates one value per row in the data the model was trained on. If you try to attach those predictions to a different data frame with a different number of rows, you will get an error or mismatched data.

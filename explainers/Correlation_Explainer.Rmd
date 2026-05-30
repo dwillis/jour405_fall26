@@ -1,0 +1,138 @@
+---
+title: "Correlation Activity: Code Explainer"
+---
+
+This document walks through the key code patterns in the Correlation activity, which explores the relationship between GDP and happiness using a scatterplot and correlation matrix.
+
+## Selecting and renaming columns with `select()`
+
+```
+happiness_analysis <- happiness_data %>%
+  select(
+    country = `Country name`,
+    happiness_score = `Happiness score`,
+    gdp_per_capita = `Logged GDP per capita`,
+    social_support = `Social support`,
+    life_expectancy = `Healthy life expectancy`,
+    freedom = `Freedom to make life choices`
+  ) %>%
+  drop_na()
+```
+
+`select()` picks specific columns from a data frame. When you write `country = \`Country name\``, you are selecting the column called "Country name" and renaming it to "country" in one step. The backticks around `Country name` are required because the original name contains a space — R needs backticks to handle column names with spaces or special characters.
+
+`drop_na()` removes any row that has a missing value in any of the selected columns. This ensures the analysis does not fail or produce misleading results due to gaps in the data.
+
+## Running a correlation test
+
+```
+cor_result <- cor.test(happiness_analysis$gdp_per_capita,
+                       happiness_analysis$happiness_score)
+```
+
+`cor.test()` calculates the correlation between two columns and also tests whether that correlation is statistically significant. It takes two vectors (lists of numbers) as input — here, GDP per capita and happiness score. The result object includes the correlation coefficient (`cor_result$estimate`), the p-value (`cor_result$p.value`), and a confidence interval.
+
+## Scatterplot with multiple visual layers
+
+```
+ggplot(happiness_analysis, aes(x = gdp_per_capita, y = happiness_score)) +
+  geom_point(aes(color = social_support, size = life_expectancy), alpha = 0.7) +
+  geom_smooth(method = "lm", se = TRUE, color = "darkgreen") +
+  geom_text(aes(label = country),
+            data = happiness_analysis %>%
+              filter(happiness_score > 7.5 | happiness_score < 3.5),
+            size = 3, hjust = -0.1, vjust = -0.1, check_overlap = TRUE)
+```
+
+This builds a layered chart:
+
+- `geom_point()` draws dots. Inside `aes()`, `color = social_support` maps dot color to a continuous variable (darker/lighter shading), and `size = life_expectancy` makes dots bigger or smaller based on another variable. This encodes four variables in one chart (x, y, color, size).
+- `geom_smooth(method = "lm")` adds a straight trend line. `se = TRUE` shows the gray shaded confidence band around the line.
+- `geom_text()` adds country labels, but only for extreme values. The `data =` argument gives this layer its own filtered dataset — only countries with very high or very low happiness scores get labels. `check_overlap = TRUE` hides labels that would overlap each other.
+
+## Using `paste()` inside chart labels
+
+```
+subtitle = paste("Pearson's r =", round(cor_result$estimate, 3),
+                 ", p-value =", round(cor_result$p.value, 4))
+```
+
+`paste()` glues text and numbers together. This dynamically builds a subtitle from the actual results of the correlation test, so the chart always displays the correct numbers even if the data changes.
+
+## Building a correlation matrix heatmap
+
+```
+happiness_analysis %>%
+  select(-country) %>%
+  cor() %>%
+  round(3) %>%
+  as.data.frame() %>%
+  rownames_to_column("Variable") %>%
+  pivot_longer(-Variable, names_to = "Measure", values_to = "Correlation") %>%
+  ggplot(aes(x = Variable, y = Measure, fill = Correlation)) +
+  geom_tile() +
+  scale_fill_gradient2(low = "blue", mid = "white", high = "red", midpoint = 0) +
+  geom_text(aes(label = round(Correlation, 2)), color = "black", size = 3)
+```
+
+This is a longer pipeline. Each step:
+
+1. `select(-country)` drops the country column (correlation only works on numbers).
+2. `cor()` computes the correlation between every pair of remaining columns, producing a matrix.
+3. `round(3)` rounds all values to 3 decimal places.
+4. `as.data.frame() %>% rownames_to_column("Variable")` converts the matrix into a regular data frame with the row names as a column.
+5. `pivot_longer()` reshapes the wide table into a long format with three columns: Variable, Measure, and Correlation. This is the format `ggplot` needs for a heatmap.
+6. `geom_tile()` draws colored rectangles.
+7. `scale_fill_gradient2()` sets the color scale: blue for negative correlations, white for zero, red for positive.
+8. `geom_text()` prints the actual numbers on top of each tile.
+
+## Common mistakes
+
+**Confusing `cor()` with `cor.test()`:**
+
+```
+# cor() gives you just the number (e.g., 0.78):
+cor(data$x, data$y)
+
+# cor.test() gives the number PLUS a p-value and confidence interval:
+cor.test(data$x, data$y)
+```
+
+Use `cor()` when you just need the correlation value (especially for matrices). Use `cor.test()` when you need to know if the correlation is statistically significant.
+
+**Passing a data frame to `cor()` with non-numeric columns:**
+
+```
+# Error — cor() cannot handle text columns like "country":
+cor(happiness_analysis)
+
+# Correct — drop non-numeric columns first:
+happiness_analysis |> select(-country) |> cor()
+```
+
+`cor()` only works on numbers. Text columns must be removed with `select(-column_name)`.
+
+**Confusing `color` and `fill` in ggplot:**
+
+```
+# color controls the OUTLINE of shapes and the color of points/lines:
+geom_point(aes(color = variable))
+
+# fill controls the INSIDE of shapes (bars, boxes, areas):
+geom_histogram(aes(fill = variable))
+
+# Using fill on geom_point() does nothing visible (points have no fill area):
+geom_point(aes(fill = variable))  # no visible effect
+```
+
+For scatterplots, use `color`. For histograms, bar charts, and density plots, use `fill`.
+
+**Putting `select()` with rename syntax inside the wrong function:**
+
+```
+# This only works in select():
+select(country = `Country name`)
+
+# In mutate(), rename(), or other functions, use different syntax:
+rename(country = `Country name`)
+```

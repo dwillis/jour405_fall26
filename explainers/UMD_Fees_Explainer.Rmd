@@ -1,0 +1,68 @@
+---
+title: "UMD Fees Activity: Code Explainer"
+---
+
+This document walks through the key code patterns in the UMD Fees activity, which introduces percentage change calculations.
+
+## Calculating percentage change with `mutate()`
+
+```
+umd_fees_pct <- umd_fees |> mutate(pct_change = (`Fall 2024` - `Fall 2021`) / `Fall 2021` * 100)
+```
+
+The percentage change formula is: (new value - old value) / old value * 100. Breaking it down:
+
+- `` `Fall 2024` - `Fall 2021` `` calculates the dollar difference. Backticks are needed because the column names contain spaces.
+- Dividing by `` `Fall 2021` `` turns the difference into a proportion (0.15 means a 15% increase).
+- Multiplying by 100 converts the proportion to a percentage (15 instead of 0.15).
+
+`mutate()` creates the new `pct_change` column and adds it to every row. The result is saved into a new data frame called `umd_fees_pct` so the original data remains unchanged.
+
+## Why backticks matter
+
+Column names with spaces, special characters, or names that start with numbers need backticks in R:
+
+```
+`Fall 2024`     # correct - backticks around the name
+Fall 2024       # error - R sees "Fall" and "2024" as two separate things
+```
+
+The `clean_names()` function from `janitor` (used in the Crime Rates activity) avoids this problem by converting all names to lowercase with underscores. But when loading data that already has spaced column names, backticks are necessary.
+
+## Common mistakes
+
+**Reversing the percentage change formula:**
+
+```
+# Wrong — divides by the new value instead of the old value:
+mutate(pct_change = (`Fall 2024` - `Fall 2021`) / `Fall 2024` * 100)
+
+# Correct — always divide by the OLD (starting) value:
+mutate(pct_change = (`Fall 2024` - `Fall 2021`) / `Fall 2021` * 100)
+```
+
+Percentage change always divides by where you started, not where you ended.
+
+**Forgetting backticks on column names with spaces:**
+
+```
+# Error: unexpected numeric constant
+mutate(pct_change = (Fall 2024 - Fall 2021) / Fall 2021 * 100)
+
+# Correct:
+mutate(pct_change = (`Fall 2024` - `Fall 2021`) / `Fall 2021` * 100)
+```
+
+If your column name has a space, a number at the start, or a special character, wrap it in backticks. If you see "unexpected numeric constant" or "unexpected symbol," missing backticks are usually the cause.
+
+**Forgetting to multiply by 100:**
+
+```
+# Gives you a decimal like 0.15 instead of 15:
+mutate(pct_change = (`Fall 2024` - `Fall 2021`) / `Fall 2021`)
+
+# Gives you a percentage like 15:
+mutate(pct_change = (`Fall 2024` - `Fall 2021`) / `Fall 2021` * 100)
+```
+
+Without `* 100`, your result is a proportion (0.15), not a percentage (15). Either can be correct depending on context, but when the column is called `pct_change`, readers expect the number 15, not 0.15.

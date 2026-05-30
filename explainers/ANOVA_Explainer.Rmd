@@ -1,0 +1,147 @@
+---
+title: "ANOVA Activity: Code Explainer"
+---
+
+This document walks through the key code patterns used in the ANOVA activity. It explains what each piece of code does, not what ANOVA itself means.
+
+## Loading libraries and setting options
+
+```
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+```
+
+This line goes inside a setup code block at the top of most notebooks. It sets three defaults for every code block that follows:
+
+- `echo = TRUE`: Show the code in the output document.
+- `message = FALSE`: Hide informational messages (like when a package loads).
+- `warning = FALSE`: Hide warning messages.
+
+You will see this in many activities. It keeps the output clean.
+
+## Generating simulated data with `rnorm()` and `set.seed()`
+
+```
+set.seed(123)
+public_college <- rnorm(100, mean = 1350, sd = 120)
+```
+
+`set.seed(123)` locks in the random number generator so everyone gets the same "random" results. The number 123 is arbitrary — any number works, but using the same one each time produces identical output.
+
+`rnorm(100, mean = 1350, sd = 120)` generates 100 random numbers drawn from a normal (bell-curve) distribution centered at 1350, with a spread (standard deviation) of 120. Think of it as simulating 100 SAT scores that cluster around 1350.
+
+## Building a data frame from vectors
+
+```
+admissions_data <- data.frame(
+  college_type = factor(rep(c("Public", "Private", "Community"), each = 100)),
+  sat_score = c(public_college, private_college, community_college)
+)
+```
+
+This combines three separate lists of numbers into one table with two columns. `rep(c("Public", "Private", "Community"), each = 100)` creates a column of labels — 100 rows of "Public", then 100 of "Private", then 100 of "Community". `factor()` tells R that this column represents categories, not ordinary text. `c()` glues the three score vectors end-to-end into one long column.
+
+## Clamping values with `pmin()` and `pmax()`
+
+```
+admissions_data$sat_score <- pmin(pmax(admissions_data$sat_score, 400), 1600)
+```
+
+Since `rnorm()` can produce any number (even unrealistic ones), this line forces every score to stay between 400 and 1600. `pmax(value, 400)` replaces anything below 400 with 400. `pmin(value, 1600)` replaces anything above 1600 with 1600. The `p` in `pmin`/`pmax` stands for "parallel" — it works element-by-element across a whole column.
+
+## Group-level summary statistics
+
+```
+admission_summary <- admissions_data |>
+  group_by(college_type) |>
+  summarize(
+    mean_score = mean(sat_score),
+    median_score = median(sat_score),
+    sd_score = sd(sat_score),
+    min_score = min(sat_score),
+    max_score = max(sat_score)
+  )
+```
+
+`group_by(college_type)` splits the data into three groups (one per college type). `summarize()` then calculates one row of statistics per group. Each line inside `summarize()` creates a new column: `mean()` for the average, `median()` for the middle value, `sd()` for the standard deviation, `min()` and `max()` for the extremes. The pipe `|>` passes the result of one step into the next.
+
+## Density plot with `geom_density()`
+
+```
+ggplot(admissions_data, aes(x = sat_score, fill = college_type)) +
+  geom_density(alpha = 0.5)
+```
+
+`ggplot()` starts a chart. `aes(x = sat_score, fill = college_type)` says: put scores on the x-axis and color each group differently. `geom_density()` draws a smooth curve showing where scores are concentrated. `alpha = 0.5` makes the curves semi-transparent so overlapping areas are visible.
+
+## Box plot with `geom_boxplot()`
+
+```
+ggplot(admissions_data, aes(x = college_type, y = sat_score, fill = college_type)) +
+  geom_boxplot()
+```
+
+A box plot shows the median, the middle 50% of values (the box), and the full range (the whiskers). Each college type gets its own box, making side-by-side comparison easy.
+
+## Running ANOVA with `aov()`
+
+```
+anova_result <- aov(sat_score ~ college_type, data = admissions_data)
+summary(anova_result)
+```
+
+`aov()` runs the ANOVA test. The formula `sat_score ~ college_type` reads as "model sat_score as depending on college_type." `summary()` prints the results table, including the F-value and p-value.
+
+## Pairwise comparisons with `TukeyHSD()`
+
+```
+tukey_result <- TukeyHSD(anova_result)
+```
+
+ANOVA tells you whether *any* group differs from the others. `TukeyHSD()` follows up by comparing every pair of groups (Public vs. Private, Public vs. Community, Private vs. Community) and reporting the size of each difference with a confidence interval and p-value.
+
+## Common mistakes
+
+**Using `aov()` on the wrong formula direction:**
+
+```
+# Wrong — this asks "does SAT score predict college type?" (backwards):
+aov(college_type ~ sat_score, data = admissions_data)
+
+# Correct — "does college type affect SAT score?":
+aov(sat_score ~ college_type, data = admissions_data)
+```
+
+The format is always `outcome ~ grouping_variable`. The thing you are measuring goes on the left of the `~`. The thing defining the groups goes on the right.
+
+**Forgetting `factor()` on the grouping variable:**
+
+```
+# If college_type is stored as plain text, aov() still works,
+# but factor() makes the intent explicit and avoids surprises:
+college_type = factor(rep(c("Public", "Private", "Community"), each = 100))
+```
+
+`factor()` tells R this column represents categories. Without it, R usually guesses correctly, but being explicit is safer.
+
+**Using `c()` when you need `rep()`:**
+
+```
+# Wrong — creates only 3 rows, not 300:
+college_type = c("Public", "Private", "Community")
+
+# Correct — creates 100 of each, for 300 total:
+college_type = rep(c("Public", "Private", "Community"), each = 100)
+```
+
+`c()` makes a vector from the values you type. `rep()` repeats them. When building simulated data, you almost always need `rep()`.
+
+**Running `TukeyHSD()` without `aov()` first:**
+
+```
+# Error — TukeyHSD needs an aov object, not raw data:
+TukeyHSD(admissions_data)
+
+# Correct — run aov() first, then pass the result to TukeyHSD():
+anova_result <- aov(sat_score ~ college_type, data = admissions_data)
+TukeyHSD(anova_result)
+```

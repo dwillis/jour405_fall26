@@ -1,0 +1,73 @@
+---
+title: "Sampling Activity: Code Explainer"
+---
+
+This document walks through the key code patterns in the Sampling activity, which introduces the basics of sampling from a population and comparing sample statistics to population statistics.
+
+## Loading the tidyverse
+
+```
+library(tidyverse)
+```
+
+This is the first line in nearly every notebook. It loads the package collection that includes the data manipulation and charting tools you will use throughout the course. Always run this block first.
+
+## Generating a population dataset
+
+In this activity, you create a data frame with 1,000 rows representing people with ages from 18 to 80. The specific code depends on the demo, but the idea is to have a known population that you can then sample from.
+
+## Sampling rows with `sample_n()`
+
+```
+sample_data <- population |> sample_n(100)
+```
+
+`sample_n(100)` randomly selects 100 rows from the data frame. Each time you run it (without setting a seed), you get a different random set of rows. This is how polling works: you talk to a subset and try to learn about the whole group.
+
+## Calculating mean and standard deviation
+
+```
+mean(sample_data$age)
+sd(sample_data$age)
+```
+
+`mean()` calculates the average. `sd()` calculates the standard deviation — a measure of how spread out the values are. You can also do this inside `summarize()`:
+
+```
+sample_data |> summarize(mean_age = mean(age), sd_age = sd(age))
+```
+
+Both approaches give the same answer. `summarize()` is more useful when you are working inside a pipeline with `group_by()`.
+
+## Comparing sample to population
+
+The point of this activity is to run `mean()` and `sd()` on both the sample and the full population, then compare. With a large sample (like 100 out of 1,000), the numbers should be close. With a smaller sample, they may differ more. Re-running the sampling block gives different results each time, illustrating that samples vary.
+
+## Common mistakes
+
+**Confusing `$` with pipes for accessing a column:**
+
+```
+# This works — $ pulls out a column as a vector:
+mean(sample_data$age)
+
+# This also works — pipe into summarize:
+sample_data |> summarize(mean_age = mean(age))
+
+# This does NOT work — you cannot pipe a data frame into mean():
+sample_data |> mean(age)
+```
+
+`mean()` expects a vector of numbers, not a data frame. Use `$` to extract the column directly, or use `summarize()` inside a pipe.
+
+**Thinking `sample_n()` modifies the original data:**
+
+```
+# This creates a NEW data frame — population is unchanged:
+sample_data <- population |> sample_n(100)
+
+# population still has all 1,000 rows
+# sample_data has 100 rows
+```
+
+Sampling creates a copy. The original data frame is never modified.

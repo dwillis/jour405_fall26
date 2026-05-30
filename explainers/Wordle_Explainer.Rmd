@@ -1,0 +1,163 @@
+---
+title: "Wordle Activity: Code Explainer"
+---
+
+This document walks through the key code patterns in the Wordle activity, which uses a simplified word game to explore probability and the `pnorm()` function.
+
+## Working with strings using `strsplit()` and `substr()`
+
+```
+first_letters <- substr(wordle_db, 1, 1)
+```
+
+`substr(text, start, stop)` extracts part of a string. `substr(wordle_db, 1, 1)` pulls out just the first character of each word. If you wanted characters 2 through 4, you would write `substr(word, 2, 4)`.
+
+```
+guess_chars <- strsplit(guess, "")[[1]]
+```
+
+`strsplit(guess, "")` splits a word into individual letters. The `""` means "split at every character." The result is a list, so `[[1]]` extracts the first (and only) element — a vector of single characters. For example, `strsplit("hello", "")[[1]]` gives `c("h", "e", "l", "l", "o")`.
+
+## Counting with `table()`
+
+```
+letter_freq <- table(unlist(strsplit(paste(words, collapse = ""), "")))
+```
+
+This line does several things in sequence:
+
+1. `paste(words, collapse = "")` glues all the words together into one giant string with no separators.
+2. `strsplit(..., "")` splits that string into individual characters.
+3. `unlist()` flattens the result from a list into a plain vector.
+4. `table()` counts how many times each character appears, returning a named vector of counts.
+
+`table()` is very useful for quick frequency counts of categorical data.
+
+## Sorting a table with `sort()`
+
+```
+letter_counts_sorted <- sort(letter_counts, decreasing = TRUE)
+```
+
+`sort()` orders values from smallest to largest (or largest to smallest with `decreasing = TRUE`). This puts the most common letters first.
+
+## Using `rep()` to initialize a vector
+
+```
+feedback <- rep(0, 5)
+```
+
+`rep(0, 5)` creates a vector of five zeros: `c(0, 0, 0, 0, 0)`. This is used as a starting point that gets filled in as the function checks each letter position. `rep()` is useful whenever you need a vector of repeated values.
+
+## Finding a match with `match()`
+
+```
+pos <- match(guess_chars[i], target_chars)
+```
+
+`match()` searches for the first occurrence of a value in a vector and returns its position. If `guess_chars[i]` is "a" and `target_chars` is `c("h", "a", "p", "p", "y")`, then `match()` returns 2. If the value is not found, it returns `NA`. `!is.na(pos)` checks whether a match was found.
+
+## Looping with `for`
+
+```
+for (i in 1:5) {
+  if (guess_chars[i] == target_chars[i]) {
+    feedback[i] <- 2
+  }
+}
+```
+
+A `for` loop repeats a block of code. `i in 1:5` means `i` takes the values 1, 2, 3, 4, 5 in turn. Each iteration checks one letter position. Loops are useful when you need to check or modify things position by position, but in most data analysis, vectorized functions (like `mutate()`) are preferred because they are faster and more readable.
+
+## Simulation with a `for` loop
+
+```
+for (i in 1:n_simulations) {
+  target <- sample(wordle_db, 1)
+  guess <- sample(wordle_db, 1)
+  feedback <- wordle_feedback(guess, target)
+  remaining <- filter_words(wordle_db, guess, feedback)
+  remaining_after_guess[i] <- length(remaining)
+}
+```
+
+This loop runs the game 1,000 times. Each iteration picks a random target word, makes a random guess, gets feedback, filters the word list, and records how many words remain. The result is a vector of 1,000 numbers showing the distribution of outcomes.
+
+## Using `pnorm()` to find probabilities
+
+```
+prob_great <- pnorm(20, mean = avg_remaining, sd = sd_remaining)
+```
+
+`pnorm()` answers: "what proportion of a normal distribution falls at or below this value?" Given the mean and standard deviation of remaining words after a guess, `pnorm(20, ...)` tells you the probability that a random guess leaves 20 or fewer words. For "at or above" probabilities, use `1 - pnorm(...)` or `pnorm(..., lower.tail = FALSE)`.
+
+## Using `qnorm()` to find cutoff values
+
+```
+lower_bound <- qnorm(0.025, mean = avg_remaining, sd = sd_remaining)
+upper_bound <- qnorm(0.975, mean = avg_remaining, sd = sd_remaining)
+```
+
+`qnorm()` is the inverse of `pnorm()`. Instead of "what probability corresponds to this value?", it answers "what value corresponds to this probability?" `qnorm(0.025)` and `qnorm(0.975)` give the boundaries of the middle 95% of the distribution.
+
+## Basic bar chart with `barplot()`
+
+```
+barplot(letter_freq, main = "Letter Frequencies", xlab = "Letter", ylab = "Frequency", col = "steelblue")
+```
+
+`barplot()` is a base R function (not ggplot) for quick bar charts. `main` sets the title. `xlab` and `ylab` set axis labels. `col` sets the bar color. Base R plotting functions are simpler than ggplot but less flexible — use them for quick looks, and ggplot for polished charts.
+
+## Side-by-side base R plots with `par(mfrow = ...)`
+
+```
+par(mfrow = c(1, 2))
+hist(remaining_after_guess, ...)
+hist(remaining_strategic, ...)
+par(mfrow = c(1, 1))
+```
+
+`par(mfrow = c(1, 2))` sets up a 1-row, 2-column layout for base R plots. The next two plots go side by side. `par(mfrow = c(1, 1))` resets to a single plot layout. This is the base R equivalent of ggplot's `facet_wrap()`.
+
+## Common mistakes
+
+**Using `[1]` instead of `[[1]]` with `strsplit()`:**
+
+```
+# Wrong — returns a list containing a vector (not the vector itself):
+strsplit("hello", "")[1]
+
+# Correct — extracts the vector from the list:
+strsplit("hello", "")[[1]]
+```
+
+`strsplit()` returns a list even when you give it one string. Use `[[1]]` to unwrap it. If you skip this, functions like `match()` and `==` will not work as expected.
+
+**Forgetting to initialize a vector before a loop:**
+
+```
+# Wrong — remaining_after_guess does not exist yet:
+for (i in 1:1000) {
+  remaining_after_guess[i] <- length(remaining)
+}
+
+# Correct — create the vector first:
+remaining_after_guess <- numeric(1000)
+for (i in 1:1000) {
+  remaining_after_guess[i] <- length(remaining)
+}
+```
+
+`numeric(1000)` creates a vector of 1,000 zeros that you fill in during the loop. Without it, R creates the vector on the fly, which is slower and can cause errors.
+
+**Confusing `pnorm()` with `qnorm()`:**
+
+```
+# pnorm() answers: "what PROBABILITY corresponds to this value?"
+pnorm(20, mean = 50, sd = 15)  # returns a probability like 0.023
+
+# qnorm() answers: "what VALUE corresponds to this probability?"
+qnorm(0.025, mean = 50, sd = 15)  # returns a value like 20.6
+```
+
+`p` goes from value to probability. `q` goes from probability to value. They are inverses of each other.

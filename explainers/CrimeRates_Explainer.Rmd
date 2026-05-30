@@ -1,0 +1,81 @@
+---
+title: "Crime Rates Activity: Code Explainer"
+---
+
+This document walks through the key code patterns in the Crime Rates activity, which introduces the `janitor` package and rate calculations.
+
+## Installing and loading a new package
+
+```
+install.packages("janitor")
+library(janitor)
+```
+
+`install.packages()` downloads a package from the internet and installs it on your computer. You only need to do this once. `library()` loads the package into your current session so you can use its functions. You need `library()` every time you start a new session. If you have already installed a package, you can skip the `install.packages()` line.
+
+## Cleaning column names with `clean_names()`
+
+```
+crimes <- read_csv("...") |> clean_names()
+```
+
+`clean_names()` is from the `janitor` package. It takes messy column names like "Grand Total", "Violent Crime - Total", or "POPULATION" and converts them to a consistent, lowercase, underscore-separated format: `grand_total`, `violent_crime_total`, `population`. This matters because R is case-sensitive — `Population` and `population` are different things. Clean names also eliminate spaces and special characters, so you never need backticks.
+
+## Calculating a rate with `mutate()`
+
+```
+crimes |> mutate(total_rate = grand_total / population * 10000)
+```
+
+`mutate()` creates a new column. The math inside works row by row: for each year, it divides the total crimes by the population and multiplies by 10,000. The result is the crime rate per 10,000 residents. The choice of 10,000 (vs. 100,000 or 1,000) is up to you — pick whatever makes the numbers easiest to understand and compare.
+
+## Saving results with `<-`
+
+```
+crimes_with_rates <- crimes |> mutate(
+  violent_rate = violent_crime_total / population * 10000,
+  property_rate = property_crime_total / population * 10000
+)
+```
+
+Without the `<-` assignment, `mutate()` shows you the result but does not save it. The previous block (`crimes |> mutate(...)`) displayed the new column but the original `crimes` data frame was unchanged. Here, `crimes_with_rates <-` saves the result as a new data frame you can use later. You can also overwrite the original: `crimes <- crimes |> mutate(...)`.
+
+## Common mistakes
+
+**Forgetting to save the result of `mutate()`:**
+
+```
+# This displays the result but does NOT save it:
+crimes |> mutate(total_rate = grand_total / population * 10000)
+
+# Later code will not find total_rate because it was never saved.
+# Fix: assign it back:
+crimes <- crimes |> mutate(total_rate = grand_total / population * 10000)
+```
+
+This is the single most common mistake in the course. If your new column "disappears" in the next code block, you forgot the `<-`.
+
+**Getting the rate formula backwards:**
+
+```
+# Wrong — divides population by crimes (a meaningless number):
+crimes |> mutate(total_rate = population / grand_total * 10000)
+
+# Correct — divides crimes by population:
+crimes |> mutate(total_rate = grand_total / population * 10000)
+```
+
+The formula is always: (the thing you are measuring) / (population) * (your multiplier).
+
+**Using `clean_names()` without loading janitor:**
+
+```
+# Error: could not find function "clean_names"
+crimes <- read_csv("...") |> clean_names()
+
+# Fix: load janitor first
+library(janitor)
+crimes <- read_csv("...") |> clean_names()
+```
+
+`clean_names()` is not part of the tidyverse — it comes from the `janitor` package, which must be loaded separately.

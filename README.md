@@ -41,5 +41,6 @@ When you finish a homework assignment:
 
 ## Resources
 
+- [R for Data Science (2e)](https://r4ds.hadley.nz/) — if we had a textbook, this would be it
 - [RStudio Cheatsheets](https://posit.co/resources/cheatsheets/) — quick reference for common tasks
 - [R Markdown Guide](https://rmarkdown.rstudio.com/lesson-1.html) — how `.Rmd` files work

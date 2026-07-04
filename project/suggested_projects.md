@@ -1,8 +1,8 @@
 # JOUR405: Suggested Final Project Ideas
 
-These project ideas are drawn from successful student work in previous semesters. Each one uses publicly available data, can be completed with the statistical methods taught in class (linear regression, t-tests, correlation analysis, z-scores), and produces findings with a clear journalistic angle.
+These project ideas are drawn from successful student work in previous semesters. Each one uses publicly available data, can be completed with the statistical methods taught in class and produces findings with a clear journalistic angle.
 
-You are not limited to these ideas. Use them as inspiration for the scope, complexity and structure of your own project.
+You are not limited to these ideas! Use them as inspiration for the scope, complexity and structure of your own project.
 
 ---
 
@@ -94,8 +94,8 @@ Can a song's peak position or weeks on the Billboard Hot 100 predict whether it 
 
 ## Tips for Scoping Your Project
 
-1. **Start with a yes/no question.** "Does X predict Y?" or "Did Z change after Event W?" forces clarity.
+1. **Start with a yes/no question.** "Does X predict Y?" or "Did Z change after Event W?" encourages clarity.
 2. **Find data before falling in love with a topic.** The good question is worthless without accessible data.
-3. **Prefer data that is already tabular.** CSVs and structured databases save weeks compared to scraping or PDF extraction.
-4. **A null finding is a finding.** If your hypothesis is wrong, that is a story. Don't torture the data to get significance.
-5. **Keep your scope to one main question and one or two follow-ups.** Projects that try to answer five questions well usually answer none of them.
+3. **Try to get data that is already tabular.** CSVs and structured databases save time compared to scraping or PDF extraction.
+4. **A null finding is a finding.** If your hypothesis is wrong, that is a story.
+5. **Keep your scope to one main question and a few follow-ups.** Projects that try to answer a lot of questions well usually answer none of them.

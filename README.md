@@ -17,15 +17,15 @@ jour405_fall26/
 
 ### `activities/`
 
-These are R Markdown (`.Rmd`) files used during class. Each one walks through a statistical concept with real data — things like sampling, confidence intervals, hypothesis testing, correlation, regression and more. You will work on these, save them and push them to GitHub.
+These are R Markdown (`.Rmd`) files used during class. Each one walks through a statistical concept with real data, things like sampling, confidence intervals, hypothesis testing, correlation, regression and more. We will work on these together, and you'll save them and push them to GitHub.
 
 ### `explainers/`
 
-Code walkthroughs for each activity. These explain what the R code is doing in plain language — not the statistical concepts, but the mechanics of each function, argument, and pattern. Each file matches an activity by name (e.g., `CarThefts_Explainer.Rmd` goes with `CarThefts.Rmd`). Use these when you are stuck on what a piece of code does or want to review before doing homework.
+Code walkthroughs for each activity. These explain what the R code is doing in plain language — not the statistical concepts, but how the functions and arguments work. Each file matches an activity by name (e.g., `CarThefts_Explainer.Rmd` goes with `CarThefts.Rmd`). Use these when you are stuck on what a piece of code does or want to review before doing homework.
 
 ### `homework/`
 
-Numbered assignments that you will complete and push back to GitHub. Each file contains instructions, empty code blocks for your answers, and questions to respond to. Homework builds on what we cover in activities and readings.
+Assignments that you will complete outside of class and push back to GitHub. Each file contains instructions, empty code blocks for your answers and questions to respond to. Homework builds on what we cover in activities and readings.
 
 ### `project/`
 
@@ -41,6 +41,5 @@ When you finish a homework assignment:
 
 ## Resources
 
-- [R for Data Science (2e)](https://r4ds.hadley.nz/) — the course textbook
 - [RStudio Cheatsheets](https://posit.co/resources/cheatsheets/) — quick reference for common tasks
 - [R Markdown Guide](https://rmarkdown.rstudio.com/lesson-1.html) — how `.Rmd` files work

@@ -11,7 +11,7 @@ knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
 
 ## Introduction
 
-In this analysis, we'll examine data on 911 drug overdose calls from Baltimore County to identify unusually busy or quiet days using z-scores. By calculating the number of calls per day and analyzing their statistical distribution, we can determine which days experienced an abnormal volume of emergency calls - information that could lead to potential story ideas.
+In this analysis, we'll examine data on 911 drug overdose calls from Baltimore County to identify unusually busy or quiet days using z-scores. By calculating the number of calls per day and analyzing their statistical distribution, we can determine which days experienced an abnormal volume of emergency calls - information that could lead to potential story ideas. The BaltCounty911Calls_Explainer.Rmd explainer document has details on the code, so have that open for reference.
 
 A z-score measures how many standard deviations a data point is from the mean. Generally:
 - Z-scores between -2 and 2 represent typical values (about 95% of the data)

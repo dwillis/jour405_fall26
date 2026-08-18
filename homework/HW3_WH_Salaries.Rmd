@@ -2,7 +2,7 @@
 title: "HW3 WH Salaries"
 ---
 
-In this assignment, we will be working with a dataset containing information about the salaries of White House staffers as of July 2025.
+In this assignment, we will be working with a dataset containing information about the salaries of White House staffers as of July 2026.
 
 ### Task 1: Load the Tidyverse
 
@@ -11,7 +11,7 @@ You will need to load the tidyverse library
 ```{r}
 ```
 
-Then you'll load the data from the web. The URL for the data is: https://raw.githubusercontent.com/dwillis/jour405/refs/heads/main/data/white_house_salaries_2025.csv. You will create a dataframe called `wh_salaries` that contains the data from this URL.
+Then you'll load the data from the web. The URL for the data is: https://raw.githubusercontent.com/dwillis/jour405/refs/heads/main/data/white_house_salaries_2026.csv. You will create a dataframe called `wh_salaries` that contains the data from this URL.
 
 ### Task 2: Load the Data and Describe It
 

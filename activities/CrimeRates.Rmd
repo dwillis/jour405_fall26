@@ -17,12 +17,15 @@ library(janitor)
 ### Task 2: Load the crime dataset from https://raw.githubusercontent.com/dwillis/jour405/refs/heads/main/data/md_annual_crime.csv
 
 ```{r}
-crimes <- read_csv("https://raw.githubusercontent.com/dwillis/jour405/refs/heads/main/data/md_annual_crime.csv") |> clean_names()
+crimes <- read_csv("https://raw.githubusercontent.com/dwillis/jour405/refs/heads/main/data/md_annual_crime.csv")
 ```
 
 
 ### Task 3: Use janitor to clean up the column names
 
+```{r}
+crimes <- crimes |> clean_names()
+```
 
 
 ### Task 4: Calculate the total crime rate for each year (picking our unit!)
@@ -43,7 +46,7 @@ crimes_with_rates <- crimes |> mutate(violent_rate = violent_crime_total/populat
 
 ### Task 6: Describe our results
 
-Write a few sentences about what you found in the data. What years had the highest crime rates? What years had the lowest crime rates? Does the pattern match your expectations?
+Write a few sentences about what you found in the data. What years had the highest crime rates? What years had the lowest crime rates? Does the pattern match your expectations? What might explain some of the results you found?
 
 
 

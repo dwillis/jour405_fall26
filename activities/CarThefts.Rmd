@@ -2,7 +2,9 @@
 title: "Car Thefts"
 ---
 
-Follow along with the demo to learn how to calculate standard deviation and how to create a histogram of the data using R and the Tidyverse. Get started by loading the tidyverse in a new R block.
+Follow along with the demo to learn how to calculate standard deviation and how to create a histogram of the data using R and the Tidyverse. You should also open the CarThefts_Explainer.Rmd file and use that as a reference.
+
+Get started by loading the tidyverse in a new R block.
 
 ### Task 1: Load the tidyverse
 

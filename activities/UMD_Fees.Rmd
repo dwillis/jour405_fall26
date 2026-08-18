@@ -21,18 +21,17 @@ library(tidyverse)
 umd_fees <- read_csv("https://raw.githubusercontent.com/dwillis/jour405/refs/heads/main/data/umd_fees.csv")
 ```
 
-### Task 3: Calculate the percentage change in each category between Fall 2024 and Fall 2021 using `mutate()`
+### Task 3: Calculate the percentage change in each category between Fall 2026 and Fall 2021 using `mutate()`
 
 ```{r}
-umd_fees_pct <- umd_fees |> mutate(pct_change = (`Fall 2024`- `Fall 2021`)/`Fall 2021` * 100)
+umd_fees_pct <- umd_fees |> mutate(pct_change = (`Fall 2026`- `Fall 2021`)/`Fall 2021` * 100)
 ```
 
 
 
-### Task 4: Describe our results
+### Task 4: Describe the results
 
-Write a few sentences about what you found in the data. What's the story here?
-
+Write a few sentences about what you found in those percentages. What's the story here? What questions do you have?
 
 
 

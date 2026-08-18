@@ -1,5 +1,5 @@
 ---
-title: "HW6_Spotify_Songsx"
+title: "HW6_Spotify_Songs"
 ---
 
 In this assignment, you will be working with a dataset of songs played on Spotify in 2020, and you'll be writing code to explore the range of danceability scores in the data, using standard deviation and histograms. You'll also write up your findings.

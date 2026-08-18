@@ -111,4 +111,4 @@ You're done with code once you hit Section 7.2.1 on the page, but if you had tro
 
 
 IMPORTANT: Be sure to save your work (Cmd-S or Ctrl-S will do it) 
-and then switch over to GitHub Desktop and add, commit and push this file to GitHub. Contact me or Matt if you're having trouble.
+and then switch over to GitHub Desktop and add, commit and push this file to GitHub. Contact me if you're having trouble.

@@ -2,7 +2,7 @@
 title: "SoccerFouls"
 ---
 
-Do fouls matter in women's college soccer? In this assignment, you'll be working with a dataset that contains information about soccer matches from last season. You'll load the data, perform some basic statistical analysis, and create a visualization to explore the relationship between fouls and the goal differential (and thus the outcome). Follow the steps below to complete the assignment.
+Do fouls matter in women's college soccer? In this assignment, you'll be working with a dataset that contains information about soccer matches from this season. You'll load the data, perform some basic statistical analysis, and create a visualization to explore the relationship between fouls and the goal differential (and thus the outcome). Follow the steps below to complete the assignment.
 
 ### Task 1: Load the tidyverse
 
@@ -11,10 +11,10 @@ library(tidyverse)
 ```
 
 
-### Task 2: Load the soccer dataset from https://raw.githubusercontent.com/dwillis/NCAAWomensSoccerData/refs/heads/main/data/ncaa_womens_soccer_matchstats_2024.csv
+### Task 2: Load the soccer dataset from https://raw.githubusercontent.com/dwillis/NCAAWomensSoccerData/refs/heads/main/data/ncaa_womens_soccer_matchstats_2026.csv
 
 ```{r}
-matches25 <- read_csv("https://raw.githubusercontent.com/dwillis/NCAAWomensSoccerData/refs/heads/main/data/ncaa_womens_soccer_matchstats_2025.csv")
+matches26 <- read_csv("https://raw.githubusercontent.com/dwillis/NCAAWomensSoccerData/refs/heads/main/data/ncaa_womens_soccer_matchstats_2026.csv")
 ```
 
 

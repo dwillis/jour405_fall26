@@ -57,10 +57,6 @@ sum(is.na(car_thefts))
 Now let's create a time series visualization of car thefts:
 
 ```{r time-series-plot}
-# Convert month to proper date format (assuming format like "Jan 2017")
-car_thefts <- car_thefts %>%
-  mutate(date = parse_date_time(month, "my"))
-
 # Plot time series
 ggplot(car_thefts, aes(x = month, y = total)) +
   geom_line() +

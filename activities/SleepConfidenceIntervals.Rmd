@@ -8,11 +8,16 @@ knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
 
 ## Are Students Getting Enough Sleep?
 
-The CDC recommends that adults aged 18-25 get at least 7 hours of sleep per night. A campus health reporter wants to know: are students at this university getting enough sleep?
+The CDC recommends that adults aged 18-25 get at least 7 hours of sleep per night. A campus health reporter wants to know: are students getting enough sleep?
 
-Remember providing the hours you slept the night before our first class? Your job is to analyze this data and determine what we can confidently say about sleep habits across the entire student body.
+Remember telling us how many hours you slept the night before our first class? That's our data. But we only asked one class, and the reporter wants to say something about *students in general*. Using a **sample** to make a claim about a **population** is exactly what a confidence interval is for.
 
-This is the core challenge of confidence intervals: using a **sample** to make claims about a **population**.
+By the end of this activity you should be able to explain four ideas. You'll use every one of them in HW9:
+
+1. **The margin of error** turns an average into "this number, plus or minus that number."
+2. **A confidence interval** is the range of averages that are believable given our data.
+3. **Checking a claim** is simple: if a number is inside the interval, the data supports it. If it's outside, the data doesn't.
+4. **More data means a smaller margin of error**, but you have to collect a lot more to make it much smaller.
 
 ### Task 1: Load the tidyverse and the data
 
@@ -21,54 +26,55 @@ library(tidyverse)
 
 sleep_data <- read_csv("https://raw.githubusercontent.com/dwillis/jour405/refs/heads/main/data/sleep_data.csv")
 
-head(sleep_data)
+sleep_data
 ```
 
-### Task 2: Calculate descriptive statistics
+### Task 2: Start with the average
 
-Let's start with what we know about these students. Calculate the mean, standard deviation and number of observations.
+```{r}
+sleep_data |>
+  summarize(
+    mean_hours = mean(hours),
+    n = n()
+  )
+```
+
+**Answer this question:** If you only had this average, what would you tell the health reporter? What's risky about reporting it as *the* answer for all students?
+
+ANSWER HERE
+
+### Task 3: Calculate the margin of error
+
+If we'd asked a different class, we'd have gotten a slightly different average. The margin of error tells us how far off our average could reasonably be. It takes three steps, all in one `summarize()`:
+
+* **Standard deviation (`sd_hours`)**: how spread out the individual answers are.
+* **Standard error (`se_hours`)**: how much the *average* would bounce around from sample to sample. It's the standard deviation divided by the square root of the number of people.
+* **Margin of error (`margin_error`)**: the standard error multiplied by about 2. For 95% confidence, `qt(0.975, df = n - 1)` gives us the exact multiplier for our sample size. You don't need to change it; just use it.
 
 ```{r}
 sleep_stats <- sleep_data |>
-  summarise(
+  summarize(
     mean_hours = mean(hours),
     sd_hours = sd(hours),
-    n = n()
+    n = n(),
+    se_hours = sd_hours / sqrt(n),
+    margin_error = qt(0.975, df = n - 1) * se_hours
   )
 
 sleep_stats
 ```
 
-**Answer this question:** Based on these numbers alone, what would you tell the health reporter? Why might it be risky to report the average as the definitive answer for all students?
+**Answer this question:** Complete this sentence using the results: "Students in our class slept an average of ___ hours, plus or minus ___ hours." Then explain in your own words what the "plus or minus" part means.
 
 ANSWER HERE
 
-### Task 3: Calculate the standard error
+### Task 4: Build the confidence interval
 
-The standard error tells us how much our sample mean would vary if we took many different samples of 37 students. It's the key to moving from "this is what 37 students told us" to "this is what we think is true for the whole campus." The formula is: standard deviation divided by the square root of the sample size.
+A confidence interval is just the average minus the margin of error to the average plus the margin of error.
 
 ```{r}
 sleep_stats <- sleep_stats |>
   mutate(
-    se_hours = sd_hours / sqrt(37)
-  )
-
-sleep_stats
-```
-
-**Answer this question:** The standard error is much smaller than the standard deviation. Why? What does each one measure?
-
-ANSWER HERE
-
-### Task 4: Calculate a 95% confidence interval
-
-Now we'll build our confidence interval. For a 95% CI with a small sample, we use the t-distribution. The `qt(0.975, df = n - 1)` function gives us the critical value — the number of standard errors we go above and below the mean. We multiply critical value by the standard error to get the margin of error, then add/subtract from the mean.
-
-```{r}
-sleep_stats <- sleep_stats |>
-  mutate(
-    t_critical = qt(0.975, df = n - 1),
-    margin_error = t_critical * se_hours,
     ci_lower = mean_hours - margin_error,
     ci_upper = mean_hours + margin_error
   )
@@ -77,102 +83,96 @@ sleep_stats |>
   select(mean_hours, margin_error, ci_lower, ci_upper)
 ```
 
-**Answer this question:** Write one sentence explaining what this confidence interval means in plain English that a reader would understand.
+**Answer this question:** Write one sentence explaining what this interval means, in words a reader would understand. (Hint: "We're 95% confident the true average for students is between ___ and ___ hours.")
 
 ANSWER HERE
 
-### Task 5: Visualize the distribution with the confidence interval
+### Task 5: Check claims against the interval
 
-This chart shows the histogram of individual sleep hours, plus the mean (red line) and the 95% confidence interval (blue shaded region). The shaded region is the range where we think the true average for all students falls.
+Here's the rule: **if a number is inside the confidence interval, our data supports it. If it's outside, our data doesn't.**
+
+Two people make claims to the reporter:
+
+* A university spokesperson says: "Our students average 8 hours of sleep a night."
+* A student health advocate says: "Our students average just 7 hours of sleep a night."
+
+```{r}
+claims <- tibble(
+  claim = c("Spokesperson: 8 hours", "Advocate: 7 hours"),
+  value = c(8, 7)
+)
+
+claims |>
+  mutate(
+    inside_interval = value >= sleep_stats$ci_lower & value <= sleep_stats$ci_upper
+  )
+```
+
+**Answer this question:** Which claim does our data support, and which doesn't it support? Explain using the interval's lower and upper bounds.
+
+ANSWER HERE
+
+### Task 6: Individuals vs. the average
+
+The confidence interval is about the *average*, not about every student. This chart shows each student's answer, with the confidence interval shaded in blue and the average as a red line.
 
 ```{r}
 ggplot(sleep_data, aes(x = hours)) +
-  geom_histogram(binwidth = 0.5, fill = "skyblue", color = "white", alpha = 0.7) +
-  geom_vline(xintercept = sleep_stats$mean_hours, color = "red", linewidth = 1) +
-  geom_vline(xintercept = sleep_stats$ci_lower, color = "blue", linetype = "dashed") +
-  geom_vline(xintercept = sleep_stats$ci_upper, color = "blue", linetype = "dashed") +
+  geom_histogram(binwidth = 0.5, fill = "gray70", color = "white") +
   annotate("rect",
-           xmin = sleep_stats$ci_lower,
-           xmax = sleep_stats$ci_upper,
+           xmin = sleep_stats$ci_lower, xmax = sleep_stats$ci_upper,
            ymin = 0, ymax = Inf,
-           fill = "blue", alpha = 0.1) +
-  annotate("text", x = sleep_stats$mean_hours + 0.1, y = 8,
-           label = paste0("Mean: ", round(sleep_stats$mean_hours, 2)),
-           hjust = 0, color = "red", fontface = "bold") +
+           fill = "blue", alpha = 0.2) +
+  geom_vline(xintercept = sleep_stats$mean_hours, color = "red", linewidth = 1) +
+  geom_vline(xintercept = 7, linetype = "dashed") +
   labs(
-    title = "Distribution of Student Sleep Hours",
-    subtitle = paste0("95% Confidence Interval for the mean: [",
-                     round(sleep_stats$ci_lower, 2), ", ",
-                     round(sleep_stats$ci_upper, 2), "]"),
-    x = "Hours of Sleep",
-    y = "Number of Students"
+    title = "Student Sleep Hours",
+    subtitle = "Blue band: 95% confidence interval for the average. Dashed line: CDC's 7 hours.",
+    x = "Hours of sleep",
+    y = "Number of students"
   ) +
   theme_minimal()
 ```
 
-**Answer this question:** Look at the chart. Notice that the confidence interval is much narrower than the spread of individual data points. Why? What's the difference between the variation in individual sleep hours and the uncertainty about the average?
+```{r}
+sleep_data |>
+  summarize(below_7 = sum(hours < 7))
+```
+
+**Answer this question:** The entire confidence interval is above 7 hours, yet some students slept less than that. How can both be true? Why is the blue band so much narrower than the spread of the bars?
 
 ANSWER HERE
 
-### Task 6: The CDC question — is 7 hours within the interval?
+### Task 7: What if we had more data?
 
-The CDC recommends at least 7 hours. Based on the confidence interval, can we say students are getting enough sleep? Let's check.
+Let's keep the same standard deviation but pretend we surveyed more people. The only thing that changes is `n`.
 
 ```{r}
-cdc_recommendation <- 7
-
-sleep_stats |>
+tibble(n = c(37, 74, 148)) |>
   mutate(
-    meets_cdc = if_else(ci_lower >= cdc_recommendation, "Yes - entire CI is at or above 7", "No - CI includes values below 7")
-  ) |>
-  select(mean_hours, ci_lower, ci_upper, meets_cdc)
+    se_hours = sleep_stats$sd_hours / sqrt(n),
+    margin_error = qt(0.975, df = n - 1) * se_hours,
+    ci_lower = sleep_stats$mean_hours - margin_error,
+    ci_upper = sleep_stats$mean_hours + margin_error
+  )
 ```
 
-**Answer this question:** Based on this result, which of these headlines is justified? Why?
-
-  a) "Students Average More Than 7 Hours of Sleep"
-  b) "Students May Not Be Getting Enough Sleep, Survey Suggests"
-  c) "Survey: Students Getting Recommended Amount of Sleep"
+**Answer this question:** Doubling the sample (37 to 74) didn't cut the margin of error in half. What did? What does that tell you about how much more data you need to make a claim much more precise?
 
 ANSWER HERE
 
-### Task 7: What about a bigger sample?
+### Task 8: Write it up
 
-The margin of error depends on the sample size. What if we had surveyed 100 students instead of 37 and got the same mean and standard deviation? Let's recalculate with a hypothetical sample size 100.
-
-```{r}
-hypothetical_n <- 100
-
-hypothetical_stats <- tibble(
-  mean_hours = sleep_stats$mean_hours,
-  sd_hours = sleep_stats$sd_hours,
-  n = hypothetical_n,
-  se_hours = sd_hours / sqrt(hypothetical_n),
-  t_critical = qt(0.975, df = hypothetical_n - 1),
-  margin_error = t_critical * se_hours,
-  ci_lower = mean_hours - margin_error,
-  ci_upper = mean_hours + margin_error
-)
-
-# Compare the two intervals side by side
-comparison <- tibble(
-  sample_size = c(sleep_stats$n, hypothetical_n),
-  margin_error = c(sleep_stats$margin_error, hypothetical_stats$margin_error),
-  ci_lower = c(sleep_stats$ci_lower, hypothetical_stats$ci_lower),
-  ci_upper = c(sleep_stats$ci_upper, hypothetical_stats$ci_upper)
-)
-
-comparison
-```
-
-**Answer this question:** How did the margin of error change? What does this tell you about the relationship between sample size and certainty?
+Write a headline and a one-paragraph lede for a campus news story about student sleep. Use the average *and* the margin of error or interval. Then add one sentence about a limitation: we surveyed one statistics class. Does that represent all students?
 
 ANSWER HERE
 
-### Task 8: Journalistic interpretation
+### Looking ahead to HW9
 
-You now have all the statistics you need. Based on what you've calculated:
+In HW9 you'll do the same steps with monthly car thefts in Prince George's County, where each month plays the role of a student:
 
-Write a headline and a one-paragraph lede for a campus news story about student sleep habits. Your text should accurately reflect the confidence interval — don't overstate or understate the findings.
-
-ANSWER HERE
+* **Task 3 above → HW9 Task 4:** calculate the standard error and margin of error in one `summarize()`.
+* **Task 4 above → HW9 Task 5:** build the interval and check a county official's claims against it.
+* **Task 6 above → HW9 Task 6:** chart the data with the interval.
+* **Task 7 above → HW9 Task 7:** see what more months of data would do.
+* **Task 8 above → HW9 Task 8:** write a headline and lede that reflect the uncertainty.

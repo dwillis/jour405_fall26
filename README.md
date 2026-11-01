@@ -21,7 +21,7 @@ These are R Markdown (`.Rmd`) files used during class. Each one walks through a 
 
 ### `explainers/`
 
-Code walkthroughs for each activity. These explain what the R code is doing in plain language — not the statistical concepts, but how the functions and arguments work. Each file matches an activity by name (e.g., `CarThefts_Explainer.Rmd` goes with `CarThefts.Rmd`). Use these when you are stuck on what a piece of code does or want to review before doing homework.
+Code walkthroughs for each activity. These explain what the R code is doing in plain language — not the statistical concepts, but how the functions and arguments work. Each file matches an activity by name (e.g., `CarThefts_Explainer.Rmd` goes with `CarThefts.Rmd`). Use these when you are stuck on what a piece of code does or want to review before doing homework. If you remember what you want to do but not which explainer showed it, start with `Function_Index.md`, which lists every R function and links to the explainer sections that use it.
 
 ### `homework/`
 

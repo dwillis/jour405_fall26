@@ -8,7 +8,7 @@ knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
 
 ## Quick Review: Making a Line Chart
 
-Let's do a quick refresher on line charts using WMATA ridership data, since a line chart will be part of your homework. This is daily bus and rail data from January 2024 through February 2025 (you may recall it from the midterm). We'll aggregate it to weekly totals so the chart is easier to read, then make a line chart.
+Let's do a quick refresher on line charts using WMATA ridership data, since a line chart will be part of your homework. This is daily bus and rail data from January 2024 through February 2026 (you may recall it from the midterm). We'll aggregate it to weekly totals so the chart is easier to read, then make a line chart.
 
 ### Task 1: Load the tidyverse and the data
 

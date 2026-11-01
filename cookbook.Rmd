@@ -1,0 +1,61 @@
+---
+title: "My JOUR405 Cookbook"
+author: "YOUR NAME"
+---
+
+This is your personal reference guide for the course. Each week, as part of your homework, you'll add one entry for the technique you learned that week. You may use this file as notes during the midterm, so the better you make it, the more it helps you.
+
+## How to write an entry
+
+Every entry has the same four parts:
+
+1. **The question.** What were you trying to find out? Write it in plain English, as a task, such as "How much did something change between two years?" Don't title it with a function name. Later you'll look things up by what you want to do, not by what the function is called.
+2. **Code that worked.** Paste code from *your own* lab or homework, not from the explainer. Keep only the lines that matter.
+3. **What the output means.** One sentence you could hand to an editor.
+4. **A mistake to avoid.** Something you got wrong, almost got wrong or had to ask about, and how you noticed.
+
+Tips:
+
+- Add the newest entry at the bottom, under a heading with the week number.
+- Leave `eval=FALSE` on your code blocks. This file is for reference, so it doesn't need to load every dataset to knit.
+- Commit and push this file each week along with your homework.
+- If you've forgotten where something was covered, `explainers/Function_Index.md` lists every function and links to the explainer sections that use it.
+
+Below is an example entry. Replace it with your own, or keep it as a model.
+
+---
+
+## Week 2: How much did something change between two years?
+
+**Code that worked**
+
+```{r eval=FALSE}
+umd_fees_pct <- umd_fees |>
+  mutate(pct_change = (`Fall 2026` - `Fall 2021`) / `Fall 2021` * 100)
+```
+
+**What the output means**
+
+`pct_change` shows how much each fee grew from Fall 2021 to Fall 2026, as a percentage of what it cost in 2021.
+
+**A mistake to avoid**
+
+I first divided by `Fall 2026` instead of `Fall 2021`, and the percentages came out smaller than they should have been. Always divide by the old (starting) value. Also, column names with spaces need backticks around them.
+
+---
+
+## Week 3:
+
+**Code that worked**
+
+```{r eval=FALSE}
+
+```
+
+**What the output means**
+
+
+
+**A mistake to avoid**
+
+

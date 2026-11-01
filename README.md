@@ -12,6 +12,7 @@ jour405_fall26/
 ├── explainers/       <- Code walkthroughs for each activity
 ├── homework/         <- Graded assignments you complete on your own
 ├── project/          <- Your final project files
+├── cookbook.Rmd      <- Your personal reference guide, one entry a week
 └── jour405_fall26.Rproj  <- Open this file in RStudio to start working
 ```
 
@@ -26,6 +27,10 @@ Code walkthroughs for each activity. These explain what the R code is doing in p
 ### `homework/`
 
 Assignments that you will complete outside of class and push back to GitHub. Each file contains instructions, empty code blocks for your answers and questions to respond to. Homework builds on what we cover in activities and readings.
+
+### `cookbook.Rmd`
+
+Your personal reference guide. Each week, as part of your homework, you'll add one entry for that week's technique: the question you were answering, code that worked from your own lab or homework, what the result means, and a mistake to avoid. The file has instructions and an example at the top. You can use it as notes during the midterm, so it pays to keep it up to date.
 
 ### `project/`
 
